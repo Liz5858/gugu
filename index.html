@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>구구몬</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <main class="phone-frame">
+      <header class="top-bar" id="globalTopBar" aria-label="페이지 이동과 현재 사용자">
+        <button class="home-button" id="homeButton" type="button">홈</button>
+        <div class="top-bar__user">
+          <div class="top-bar__label">현재 친구</div>
+          <div class="top-bar__identity">
+            <span class="top-bar__avatar" id="currentUserAvatar" aria-hidden="true">댕</span>
+            <strong id="currentUserName">댕댕</strong>
+          </div>
+        </div>
+      </header>
+
+      <div class="screen is-visible" id="home-screen">
+        <section class="view-panel" aria-label="홈 화면">
+          <section class="hero-card">
+            <button class="story-chip" type="button">구구몬 이야기</button>
+
+            <div class="hero-copy">
+              <p class="brand">GuguMon <span>풀버전</span></p>
+              <h1>친구 이름을 적고<br>바로 시작해요</h1>
+              <p class="subtitle">저장된 이름을 누르면 바로 메인 화면으로 이동해요.</p>
+            </div>
+
+            <button class="friend-panel friend-panel--action" id="savedFriendButton" type="button">
+              <div class="friend-avatar" id="friendCardAvatar" aria-hidden="true">댕</div>
+              <div class="friend-meta">
+                <strong id="friendCardName">댕댕</strong>
+                <span id="friendCardHint">저장된 이름을 눌러 바로 시작해요.</span>
+              </div>
+              <span class="ghost-link">바로 시작</span>
+            </button>
+
+            <form class="friend-form" id="friendForm">
+              <label class="sr-only" for="friendName">이름을 적어요</label>
+              <input id="friendName" name="friendName" type="text" maxlength="12" placeholder="이름을 적어요">
+              <button class="primary-button" type="submit">친구 추가</button>
+            </form>
+          </section>
+        </section>
+      </div>
+
+      <div class="screen" id="main-screen">
+        <section class="view-panel" aria-label="메인 화면">
+          <section class="hero-card hero-card--compact">
+          <div class="hero-copy hero-copy--compact">
+            <p class="brand brand--small">GuguMon <span>메인</span></p>
+            <h1>무엇부터 해볼까요?</h1>
+            <p class="subtitle">지금은 곱셈만 열려 있어요. 다른 카드는 곧 준비될 예정이에요.</p>
+          </div>
+          </section>
+
+          <section class="mode-list" aria-label="학습 선택 카드">
+            <header class="section-header">
+              <div>
+                <p class="section-kicker">메인 화면</p>
+                <h2>학습 카드를 선택해요</h2>
+              </div>
+            </header>
+
+          <article class="mode-card mode-add">
+            <div class="mode-symbol">+</div>
+            <div class="mode-body">
+              <h3>덧셈 <span>준비 중</span></h3>
+              <p>아직 열리지 않은 학습 모드예요.</p>
+              <div class="mode-actions">
+                <button class="soft-button mode-select-button" type="button" data-mode="덧셈" data-available="false">선택하기</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="mode-card mode-subtract">
+            <div class="mode-symbol">-</div>
+            <div class="mode-body">
+              <h3>뺄셈 <span>준비 중</span></h3>
+              <p>아직 열리지 않은 학습 모드예요.</p>
+              <div class="mode-actions">
+                <button class="soft-button mode-select-button" type="button" data-mode="뺄셈" data-available="false">선택하기</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="mode-card mode-multiply featured">
+            <div class="mode-symbol">×</div>
+            <div class="mode-body">
+              <h3>곱셈 <span>구구단</span></h3>
+              <p>현재 플레이 가능한 학습 모드예요.</p>
+              <div class="mode-actions">
+                <button class="play-button mode-select-button" type="button" data-mode="곱셈(구구단)" data-available="true">PLAY</button>
+              </div>
+            </div>
+          </article>
+
+            <article class="mode-card mode-divide">
+              <div class="mode-symbol">÷</div>
+              <div class="mode-body">
+                <h3>나눗셈 <span>준비 중</span></h3>
+                <p>아직 열리지 않은 학습 모드예요.</p>
+                <div class="mode-actions">
+                  <button class="soft-button mode-select-button" type="button" data-mode="나눗셈" data-available="false">선택하기</button>
+                </div>
+              </div>
+            </article>
+          </section>
+        </section>
+      </div>
+
+      <div class="screen" id="level-map-screen">
+        <section class="level-map-layout" aria-label="레벨 맵 화면">
+          <header class="level-map-header">
+            <button class="level-map-back" id="levelMapBackButton" type="button">뒤로 가기</button>
+            <div class="level-map-header__copy">
+              <h2>곱셈 우주 맵</h2>
+              <p>행성을 골라 구구단을 시작해요</p>
+            </div>
+          </header>
+
+          <div class="constellation-map" id="constellationMap">
+            <svg class="constellation-lines" viewBox="0 0 300 520" preserveAspectRatio="none" aria-hidden="true">
+              <polyline points="150,36 72,108 228,168 105,228 195,288 78,348 222,408 150,468" />
+            </svg>
+
+            <button class="planet" type="button" data-level="2" style="--planet-x: 50%; --planet-y: 7%;">
+              <span class="planet__glow" aria-hidden="true"></span>
+              <span class="planet__buddy" aria-hidden="true">🐣</span>
+              <span class="planet__label">2단</span>
+              <strong class="planet__number">2</strong>
+            </button>
+            <button class="planet" type="button" data-level="3" style="--planet-x: 24%; --planet-y: 21%;">
+              <span class="planet__glow" aria-hidden="true"></span>
+              <span class="planet__buddy" aria-hidden="true">🐣</span>
+              <span class="planet__label">3단</span>
+              <strong class="planet__number">3</strong>
+            </button>
+            <button class="planet" type="button" data-level="4" style="--planet-x: 76%; --planet-y: 32%;">
+              <span class="planet__glow" aria-hidden="true"></span>
+              <span class="planet__buddy" aria-hidden="true">🐣</span>
+              <span class="planet__label">4단</span>
+              <strong class="planet__number">4</strong>
+            </button>
+            <button class="planet" type="button" data-level="5" style="--planet-x: 35%; --planet-y: 44%;">
+              <span class="planet__glow" aria-hidden="true"></span>
+              <span class="planet__buddy" aria-hidden="true">🐣</span>
+              <span class="planet__label">5단</span>
+              <strong class="planet__number">5</strong>
+            </button>
+            <button class="planet" type="button" data-level="6" style="--planet-x: 65%; --planet-y: 55%;">
+              <span class="planet__glow" aria-hidden="true"></span>
+              <span class="planet__buddy" aria-hidden="true">🐣</span>
+              <span class="planet__label">6단</span>
+              <strong class="planet__number">6</strong>
+            </button>
+            <button class="planet" type="button" data-level="7" style="--planet-x: 26%; --planet-y: 67%;">
+              <span class="planet__glow" aria-hidden="true"></span>
+              <span class="planet__buddy" aria-hidden="true">🐣</span>
+              <span class="planet__label">7단</span>
+              <strong class="planet__number">7</strong>
+            </button>
+            <button class="planet" type="button" data-level="8" style="--planet-x: 74%; --planet-y: 78%;">
+              <span class="planet__glow" aria-hidden="true"></span>
+              <span class="planet__buddy" aria-hidden="true">🐣</span>
+              <span class="planet__label">8단</span>
+              <strong class="planet__number">8</strong>
+            </button>
+            <button class="planet" type="button" data-level="9" style="--planet-x: 50%; --planet-y: 90%;">
+              <span class="planet__glow" aria-hidden="true"></span>
+              <span class="planet__buddy" aria-hidden="true">🐣</span>
+              <span class="planet__label">9단</span>
+              <strong class="planet__number">9</strong>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <div class="screen" id="game-screen">
+        <section class="game-layout" aria-label="게임 플레이 화면">
+          <header class="game-hud">
+            <div class="game-hud__badge game-hud__badge--bolt">
+              <span aria-hidden="true">⚡</span>
+              <strong id="playBoltCount">0</strong>
+            </div>
+            <div class="game-hud__center">
+              <p class="game-hud__mode" id="playModeLabel">곱셈 Lv.1 · 2단 시작</p>
+              <p class="game-hud__player" id="playPlayerName">댕댕</p>
+            </div>
+            <button class="game-hud__exit" id="exitGameButton" type="button">나가기</button>
+          </header>
+
+          <div class="combo-bar">
+            <span class="combo-bar__label">콤보</span>
+            <div class="combo-bar__track">
+              <div class="combo-bar__fill" id="playComboFill"></div>
+              <span class="combo-bar__egg" aria-hidden="true">🥚</span>
+            </div>
+            <strong class="combo-bar__count" id="playComboCount">0</strong>
+          </div>
+
+          <section class="play-panel">
+            <p class="play-panel__hint" id="playHint">버튼을 눌러 2씩 묶음을 만들어 봐요</p>
+            <div class="play-equation" aria-label="현재 문제">
+              <span id="playMultiplier">2</span>
+              <span class="play-equation__op">×</span>
+              <span id="playMultiplicand">2</span>
+              <span class="play-equation__op">=</span>
+              <span class="play-equation__answer" id="playAnswerDisplay">?</span>
+            </div>
+            <button class="group-button" id="addGroupButton" type="button">한 묶음 더하기</button>
+          </section>
+
+          <div class="keypad" id="playKeypad" aria-label="숫자 패드">
+            <button class="keypad-button" type="button" data-key="1">1</button>
+            <button class="keypad-button" type="button" data-key="2">2</button>
+            <button class="keypad-button" type="button" data-key="3">3</button>
+            <button class="keypad-button" type="button" data-key="4">4</button>
+            <button class="keypad-button" type="button" data-key="5">5</button>
+            <button class="keypad-button" type="button" data-key="6">6</button>
+            <button class="keypad-button" type="button" data-key="7">7</button>
+            <button class="keypad-button" type="button" data-key="8">8</button>
+            <button class="keypad-button" type="button" data-key="9">9</button>
+            <button class="keypad-button keypad-button--danger" type="button" data-action="clear">⌫</button>
+            <button class="keypad-button" type="button" data-key="0">0</button>
+            <button class="keypad-button keypad-button--confirm" type="button" data-action="submit">확인</button>
+          </div>
+
+          <button class="zone-entry-button" id="openZoneButton" type="button">2배 존</button>
+        </section>
+      </div>
+
+      <div class="screen" id="zone-screen">
+        <section class="game-layout" aria-label="2배 존 화면">
+          <header class="game-hud">
+            <div class="game-hud__badge game-hud__badge--bolt">
+              <span aria-hidden="true">⚡</span>
+              <strong id="zoneBoltCount">0</strong>
+            </div>
+            <div class="game-hud__center">
+              <p class="game-hud__mode">2배 존 · 심화 학습</p>
+              <p class="game-hud__player" id="zonePlayerName">댕댕</p>
+            </div>
+            <button class="game-hud__back" id="zoneBackButton" type="button">뒤로 가기</button>
+          </header>
+
+          <div class="combo-bar">
+            <span class="combo-bar__label">콤보</span>
+            <div class="combo-bar__track">
+              <div class="combo-bar__fill" id="zoneComboFill"></div>
+              <span class="combo-bar__egg" aria-hidden="true">🥚</span>
+            </div>
+            <strong class="combo-bar__count" id="zoneComboCount">0</strong>
+          </div>
+
+          <section class="play-panel play-panel--zone">
+            <p class="play-panel__hint" id="gameHelper">A와 B를 입력해서 2배 조합을 완성해요.</p>
+            <div class="equation-board" aria-label="2배 존 수식">
+              <button class="equation-slot is-active" id="slotA" type="button" data-slot="a">
+                <span>A</span>
+                <strong id="slotAValue">?</strong>
+              </button>
+              <span class="equation-operator">×</span>
+              <button class="equation-slot" id="slotB" type="button" data-slot="b">
+                <span>B</span>
+                <strong id="slotBValue">?</strong>
+              </button>
+              <span class="equation-operator">=</span>
+              <div class="equation-result">
+                <span>C</span>
+                <strong id="resultValue">2</strong>
+              </div>
+            </div>
+            <div class="zone-target">
+              <span>목표 조합</span>
+              <strong id="targetLabel">2 x 1</strong>
+              <span>= <strong id="targetValue">2</strong></span>
+            </div>
+            <p class="zone-found">찾은 조합 <strong id="foundCount">0 / 9</strong></p>
+          </section>
+
+          <div class="keypad" id="zoneKeypad" aria-label="숫자 패드">
+            <button class="keypad-button" type="button" data-key="1">1</button>
+            <button class="keypad-button" type="button" data-key="2">2</button>
+            <button class="keypad-button" type="button" data-key="3">3</button>
+            <button class="keypad-button" type="button" data-key="4">4</button>
+            <button class="keypad-button" type="button" data-key="5">5</button>
+            <button class="keypad-button" type="button" data-key="6">6</button>
+            <button class="keypad-button" type="button" data-key="7">7</button>
+            <button class="keypad-button" type="button" data-key="8">8</button>
+            <button class="keypad-button" type="button" data-key="9">9</button>
+            <button class="keypad-button keypad-button--danger" type="button" data-action="clear">지우기</button>
+            <button class="keypad-button" type="button" data-key="0">0</button>
+            <button class="keypad-button keypad-button--confirm" type="button" data-action="submit">확인</button>
+          </div>
+        </section>
+      </div>
+
+      <footer class="bottom-actions" id="globalBottomBar">
+        <button class="soft-button parent-button" type="button">부모님</button>
+      </footer>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
+  <div class="celebration-popup" id="celebrationPopup" aria-live="polite" aria-atomic="true">
+    <strong>구구몬에게 힘을 줬어요!</strong>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
