@@ -2,8 +2,15 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>구구몬</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#151221">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="구구팡">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐣</text></svg>">
+  <title>구구팡</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -26,10 +33,10 @@
       <div class="screen is-visible" id="home-screen">
         <section class="view-panel" aria-label="홈 화면">
           <section class="hero-card">
-            <button class="story-chip" type="button">구구몬 이야기</button>
+            <button class="story-chip" type="button">구구팡 이야기</button>
 
             <div class="hero-copy">
-              <p class="brand">GuguMon <span>풀버전</span></p>
+              <p class="brand">GuGuPang <span> version 1.0</span></p>
               <h1>친구 이름을 적고<br>바로 시작해요</h1>
               <p class="subtitle">저장된 이름을 누르면 바로 메인 화면으로 이동해요.</p>
             </div>
@@ -56,7 +63,7 @@
         <section class="view-panel" aria-label="메인 화면">
           <section class="hero-card hero-card--compact">
           <div class="hero-copy hero-copy--compact">
-            <p class="brand brand--small">GuguMon <span>메인</span></p>
+            <p class="brand brand--small">GuGuPang <span>메인</span></p>
             <h1>무엇부터 해볼까요?</h1>
             <p class="subtitle">지금은 곱셈만 열려 있어요. 다른 카드는 곧 준비될 예정이에요.</p>
           </div>
@@ -132,54 +139,62 @@
               <polyline points="150,36 72,108 228,168 105,228 195,288 78,348 222,408 150,468" />
             </svg>
 
-            <button class="planet" type="button" data-level="2" style="--planet-x: 50%; --planet-y: 7%;">
+            <div class="planet" data-level="2" style="--planet-x: 50%; --planet-y: 7%;">
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">2단</span>
               <strong class="planet__number">2</strong>
-            </button>
-            <button class="planet" type="button" data-level="3" style="--planet-x: 24%; --planet-y: 21%;">
+              <button class="planet__satellite" type="button" data-level="2" aria-label="2배 존 2단">2×</button>
+            </div>
+            <div class="planet" data-level="3" style="--planet-x: 24%; --planet-y: 21%;">
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">3단</span>
               <strong class="planet__number">3</strong>
-            </button>
-            <button class="planet" type="button" data-level="4" style="--planet-x: 76%; --planet-y: 32%;">
+              <button class="planet__satellite" type="button" data-level="3" aria-label="2배 존 3단">2×</button>
+            </div>
+            <div class="planet" data-level="4" style="--planet-x: 76%; --planet-y: 32%;">
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">4단</span>
               <strong class="planet__number">4</strong>
-            </button>
-            <button class="planet" type="button" data-level="5" style="--planet-x: 35%; --planet-y: 44%;">
+              <button class="planet__satellite" type="button" data-level="4" aria-label="2배 존 4단">2×</button>
+            </div>
+            <div class="planet" data-level="5" style="--planet-x: 35%; --planet-y: 44%;">
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">5단</span>
               <strong class="planet__number">5</strong>
-            </button>
-            <button class="planet" type="button" data-level="6" style="--planet-x: 65%; --planet-y: 55%;">
+              <button class="planet__satellite" type="button" data-level="5" aria-label="2배 존 5단">2×</button>
+            </div>
+            <div class="planet" data-level="6" style="--planet-x: 65%; --planet-y: 55%;">
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">6단</span>
               <strong class="planet__number">6</strong>
-            </button>
-            <button class="planet" type="button" data-level="7" style="--planet-x: 26%; --planet-y: 67%;">
+              <button class="planet__satellite" type="button" data-level="6" aria-label="2배 존 6단">2×</button>
+            </div>
+            <div class="planet" data-level="7" style="--planet-x: 26%; --planet-y: 67%;">
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">7단</span>
               <strong class="planet__number">7</strong>
-            </button>
-            <button class="planet" type="button" data-level="8" style="--planet-x: 74%; --planet-y: 78%;">
+              <button class="planet__satellite" type="button" data-level="7" aria-label="2배 존 7단">2×</button>
+            </div>
+            <div class="planet" data-level="8" style="--planet-x: 74%; --planet-y: 78%;">
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">8단</span>
               <strong class="planet__number">8</strong>
-            </button>
-            <button class="planet" type="button" data-level="9" style="--planet-x: 50%; --planet-y: 90%;">
+              <button class="planet__satellite" type="button" data-level="8" aria-label="2배 존 8단">2×</button>
+            </div>
+            <div class="planet" data-level="9" style="--planet-x: 50%; --planet-y: 90%;">
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">9단</span>
               <strong class="planet__number">9</strong>
-            </button>
+              <button class="planet__satellite" type="button" data-level="9" aria-label="2배 존 9단">2×</button>
+            </div>
           </div>
         </section>
       </div>
@@ -234,7 +249,6 @@
             <button class="keypad-button keypad-button--confirm" type="button" data-action="submit">확인</button>
           </div>
 
-          <button class="zone-entry-button" id="openZoneButton" type="button">2배 존</button>
         </section>
       </div>
 
@@ -312,9 +326,11 @@
 
   <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
   <div class="celebration-popup" id="celebrationPopup" aria-live="polite" aria-atomic="true">
-    <strong>구구몬에게 힘을 줬어요!</strong>
+    <strong>구구팡에게 힘을 줬어요!</strong>
   </div>
 
-  <script src="script.js"></script>
+  <script src="./utils.js"></script>
+  <script src="./main.js"></script>
+  <script src="./pwa.js"></script>
 </body>
 </html>
