@@ -1,3 +1,10 @@
+function setViewportHeight() {
+  document.documentElement.style.setProperty("--app-vh", `${window.innerHeight}px`)
+}
+setViewportHeight()
+window.addEventListener("resize", setViewportHeight)
+window.addEventListener("orientationchange", setViewportHeight)
+
 const toast = document.getElementById("toast")
 const friendForm = document.getElementById("friendForm")
 const friendNameInput = document.getElementById("friendName")
