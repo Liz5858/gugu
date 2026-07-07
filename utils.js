@@ -8,10 +8,14 @@ const SPEED_BONUS_FAST_MS = 2000
 const SPEED_BONUS_MID_MS = 4000
 const LEVEL_UP_AVG_TIME_MS = 3000
 const LEVEL_UP_MIN_MASTERY = 150
+const ZONE_PAIR_BOLT_REWARD = 15
+const ZONE_CLEAR_BOLT_BONUS = 100
 
 let toastTimer
 let popupTimer
 let levelClearTimer
+let zoneClearTimer
+let zonePreviewTimer
 let activeSlot = "a"
 let lastProblem = null
 let currentPower = 0
@@ -19,9 +23,11 @@ let currentPower = 0
 const gameState = {
   bolts: 0,
   combo: 0,
-  targetNumber: 1,
   inputs: { a: "", b: "" },
   foundPairs: new Set(),
+  zoneDan: 2,
+  zoneTargetN: 8,
+  zoneFactorPairs: [],
 }
 
 const playState = {
@@ -569,7 +575,9 @@ function updateSharedHud() {
   zoneBoltCount.textContent = gameState.bolts
   updatePowerBar(powerBar, playComboCount, currentPower)
   updateComboBar(zoneComboFill, zoneComboCount, gameState.combo)
-  foundCount.textContent = `${gameState.foundPairs.size} / 9`
+  if (foundCount && gameState.zoneFactorPairs.length > 0) {
+    foundCount.textContent = `${gameState.foundPairs.size} / ${gameState.zoneFactorPairs.length}`
+  }
 }
 
 function updatePlayView() {
@@ -615,7 +623,6 @@ function setupPlayGame(dan = 2, subLevel = 1) {
   gameState.bolts = 0
   gameState.combo = 0
   gameState.foundPairs = new Set()
-  gameState.targetNumber = 1
   lastProblem = null
   currentPower = 0
   playState.questionsAnswered = 0
@@ -626,8 +633,6 @@ function setupPlayGame(dan = 2, subLevel = 1) {
   updateSharedHud()
   resetPowerGauge()
   nextPlayQuestion()
-  resetZoneInputs()
-  nextZoneTarget()
 }
 
 function finishStage() {
@@ -695,19 +700,248 @@ function handlePlayCorrect() {
   nextPlayQuestion()
 }
 
-function setupZoneGame(level) {
-  gameState.bolts = 0
-  gameState.combo = 0
+function getFactors(n) {
+  const pairs = []
+  for (let a = 1; a * a <= n; a += 1) {
+    if (n % a === 0) {
+      pairs.push([a, n / a])
+    }
+  }
+  return pairs
+}
+
+function pairKey(a, b) {
+  const min = Math.min(a, b)
+  const max = Math.max(a, b)
+  return `${min}x${max}`
+}
+
+function pickZoneTarget(dan) {
+  const multiplier = Math.floor(Math.random() * 9) + 1
+  return dan * multiplier
+}
+
+function isValidZonePairKey(key) {
+  return gameState.zoneFactorPairs.some(([a, b]) => `${a}x${b}` === key)
+}
+
+function renderZoneFactorTiles() {
+  const tilesContainer = document.getElementById("zoneFactorTiles")
+  if (!tilesContainer) return
+
+  tilesContainer.innerHTML = ""
+
+  gameState.zoneFactorPairs.forEach(([a, b]) => {
+    const key = `${a}x${b}`
+    const tile = document.createElement("div")
+    tile.className = "zone-factor-tile"
+    tile.dataset.pair = key
+
+    if (gameState.foundPairs.has(key)) {
+      tile.classList.add("zone-factor-tile--found")
+      tile.textContent = `${a}×${b}`
+    } else {
+      tile.classList.add("zone-factor-tile--hidden")
+      tile.textContent = "?"
+    }
+
+    tilesContainer.appendChild(tile)
+  })
+}
+
+function renderZoneCirclePreview(a, b) {
+  const preview = document.getElementById("zoneCirclePreview")
+  if (!preview) return
+
+  window.clearTimeout(zonePreviewTimer)
+  preview.hidden = false
+  preview.innerHTML = ""
+
+  const title = document.createElement("p")
+  title.className = "zone-circle-preview__title"
+  title.textContent = `${a}×${b} 묶음`
+  preview.appendChild(title)
+
+  const grid = document.createElement("div")
+  grid.className = "zone-circle-preview__grid"
+
+  for (let row = 0; row < b; row += 1) {
+    const rowEl = document.createElement("div")
+    rowEl.className = "zone-circle-preview__row"
+
+    for (let col = 0; col < a; col += 1) {
+      const dot = document.createElement("div")
+      dot.className = "zone-circle-preview__dot"
+      rowEl.appendChild(dot)
+    }
+
+    grid.appendChild(rowEl)
+  }
+
+  preview.appendChild(grid)
+  preview.classList.remove("zone-circle-preview--show")
+  void preview.offsetWidth
+  preview.classList.add("zone-circle-preview--show")
+
+  zonePreviewTimer = window.setTimeout(() => {
+    preview.classList.remove("zone-circle-preview--show")
+    preview.hidden = true
+    preview.innerHTML = ""
+  }, 2600)
+}
+
+function showZoneClearPopup(bonusBolts, onDone) {
+  window.clearTimeout(zoneClearTimer)
+
+  const zoneClearPopup = document.getElementById("zoneClearPopup")
+  const zoneClearMessage = document.getElementById("zoneClearMessage")
+  const zoneClearReward = document.getElementById("zoneClearReward")
+
+  if (zoneClearMessage) {
+    zoneClearMessage.textContent = `${gameState.zoneTargetN}의 모든 곱셈 조합을 찾았어요!`
+  }
+  if (zoneClearReward) {
+    zoneClearReward.textContent = `+${bonusBolts} ⚡`
+  }
+
+  if (zoneClearPopup) {
+    zoneClearPopup.classList.add("show")
+  }
+
+  zoneClearTimer = window.setTimeout(() => {
+    if (zoneClearPopup) zoneClearPopup.classList.remove("show")
+    if (typeof onDone === "function") onDone()
+  }, 2800)
+}
+
+function updateZoneView() {
+  const zoneTargetN = document.getElementById("zoneTargetN")
+  if (zoneTargetN) zoneTargetN.textContent = gameState.zoneTargetN
+  if (resultValue) resultValue.textContent = gameState.zoneTargetN
+  if (slotAValue) slotAValue.textContent = gameState.inputs.a || "?"
+  if (slotBValue) slotBValue.textContent = gameState.inputs.b || "?"
+  if (foundCount) {
+    foundCount.textContent = `${gameState.foundPairs.size} / ${gameState.zoneFactorPairs.length}`
+  }
+}
+
+function startNextZoneRound() {
   gameState.foundPairs = new Set()
-  gameState.targetNumber = 1
   gameState.inputs = { a: "", b: "" }
+  gameState.zoneTargetN = pickZoneTarget(gameState.zoneDan)
+  gameState.zoneFactorPairs = getFactors(gameState.zoneTargetN)
   activeSlot = "a"
-  updateSharedHud()
-  updateEquationView()
-  gameHelper.textContent = "A와 B를 입력해서 2배 조합을 완성해요."
+
+  renderZoneFactorTiles()
+  updateZoneView()
+  if (gameHelper) {
+    gameHelper.textContent = `${gameState.zoneDan}배 존 · ${gameState.zoneTargetN}을 만드는 조합을 모두 찾아봐요!`
+  }
   setActiveSlot("a")
   resetZoneInputs()
-  nextZoneTarget()
+}
+
+function setupZoneGame(dan) {
+  gameState.bolts = 0
+  gameState.combo = 0
+  gameState.zoneDan = dan
+  startNextZoneRound()
+  updateSharedHud()
+  showToast(`${dan}배 보너스 존 · 목표 ${gameState.zoneTargetN}!`)
+}
+
+function setActiveSlot(slotName) {
+  activeSlot = slotName
+  slotAButton.classList.toggle("is-active", slotName === "a")
+  slotBButton.classList.toggle("is-active", slotName === "b")
+}
+
+function resetZoneInputs(nextSlot = "a") {
+  gameState.inputs.a = ""
+  gameState.inputs.b = ""
+  setActiveSlot(nextSlot)
+  updateZoneView()
+}
+
+function handleZoneCorrect(a, b) {
+  const key = pairKey(a, b)
+  gameState.foundPairs.add(key)
+  gameState.combo += 1
+  gameState.bolts += ZONE_PAIR_BOLT_REWARD
+
+  renderZoneFactorTiles()
+  renderZoneCirclePreview(a, b)
+  updateSharedHud()
+  showCelebration()
+
+  if (gameHelper) {
+    gameHelper.textContent = `${a}×${b} 정답! ⚡ +${ZONE_PAIR_BOLT_REWARD}`
+  }
+
+  if (gameState.foundPairs.size >= gameState.zoneFactorPairs.length) {
+    gameState.bolts += ZONE_CLEAR_BOLT_BONUS
+    updateSharedHud()
+    showZoneClearPopup(ZONE_CLEAR_BOLT_BONUS, () => {
+      startNextZoneRound()
+      if (gameHelper) {
+        gameHelper.textContent = `다음 목표 ${gameState.zoneTargetN}! 조합을 모두 찾아봐요!`
+      }
+      showToast(`다음 목표 숫자 ${gameState.zoneTargetN}`)
+    })
+    return
+  }
+
+  resetZoneInputs()
+}
+
+function handleZoneWrong(message) {
+  gameState.combo = 0
+  updateSharedHud()
+  if (gameHelper) gameHelper.textContent = message
+  showToast(message)
+  resetZoneInputs()
+}
+
+function submitZoneEquation() {
+  if (gameState.inputs.a === "" || gameState.inputs.b === "") {
+    showToast("두 수를 모두 입력해 주세요.")
+    return
+  }
+
+  const firstValue = Number(gameState.inputs.a)
+  const secondValue = Number(gameState.inputs.b)
+
+  if (firstValue <= 0 || secondValue <= 0) {
+    handleZoneWrong("1보다 큰 수를 입력해 봐요!")
+    return
+  }
+
+  if (firstValue * secondValue !== gameState.zoneTargetN) {
+    handleZoneWrong(`곱이 ${gameState.zoneTargetN}이 되도록 다시 생각해 봐요!`)
+    return
+  }
+
+  const normalizedKey = pairKey(firstValue, secondValue)
+
+  if (!isValidZonePairKey(normalizedKey)) {
+    handleZoneWrong("올바른 조합이 아니에요!")
+    return
+  }
+
+  if (gameState.foundPairs.has(normalizedKey)) {
+    handleZoneWrong("이미 찾은 조합이에요!")
+    return
+  }
+
+  const [a, b] = normalizedKey.split("x").map(Number)
+  handleZoneCorrect(a, b)
+}
+
+function handleZoneKeypadNumber(value) {
+  const current = gameState.inputs[activeSlot]
+  if (current.length >= 2) return
+  gameState.inputs[activeSlot] = current + value
+  updateZoneView()
 }
 
 function handlePlayWrong(message) {
@@ -741,91 +975,6 @@ function handlePlayKeypadNumber(value) {
   if (playState.answerInput.length >= maxLength) return
   playState.answerInput += value
   updatePlayView()
-}
-
-function setActiveSlot(slotName) {
-  activeSlot = slotName
-  slotAButton.classList.toggle("is-active", slotName === "a")
-  slotBButton.classList.toggle("is-active", slotName === "b")
-}
-
-function updateEquationView() {
-  const result = 2 * gameState.targetNumber
-  targetLabel.textContent = `2 x ${gameState.targetNumber}`
-  targetValue.textContent = result
-  resultValue.textContent = result
-  slotAValue.textContent = gameState.inputs.a || "?"
-  slotBValue.textContent = gameState.inputs.b || "?"
-}
-
-function resetZoneInputs(nextSlot = "a") {
-  gameState.inputs.a = ""
-  gameState.inputs.b = ""
-  setActiveSlot(nextSlot)
-  updateEquationView()
-}
-
-function nextZoneTarget() {
-  if (gameState.foundPairs.size >= 9) {
-    gameHelper.textContent = "2배 존의 모든 조합을 찾았어요!"
-    return
-  }
-  const remainingNumbers = []
-  for (let number = 1; number <= 9; number += 1) {
-    const key = `2x${number}`
-    if (!gameState.foundPairs.has(key)) {
-      remainingNumbers.push(number)
-    }
-  }
-  const randomIndex = Math.floor(Math.random() * remainingNumbers.length)
-  gameState.targetNumber = remainingNumbers[randomIndex]
-  gameHelper.textContent = "A와 B를 입력해서 2배 조합을 완성해요."
-  resetZoneInputs()
-}
-
-function handleZoneCorrect() {
-  gameState.combo += 1
-  gameState.bolts += 10 * (gameState.combo / 10)
-  updateSharedHud()
-  showCelebration()
-  gameHelper.textContent = "정답이에요! 새로운 2배 조합으로 넘어가요."
-  nextZoneTarget()
-}
-
-function handleZoneWrong(message) {
-  gameState.combo = 0
-  updateSharedHud()
-  gameHelper.textContent = message
-  showToast(message)
-  resetZoneInputs()
-}
-
-function submitZoneEquation() {
-  const firstValue = Number(gameState.inputs.a)
-  const secondValue = Number(gameState.inputs.b)
-  if (gameState.inputs.a === "" || gameState.inputs.b === "") {
-    showToast("A와 B를 모두 입력해 주세요.")
-    return
-  }
-  const expectedResult = 2 * gameState.targetNumber
-  const normalizedPair = [firstValue, secondValue].sort((a, b) => a - b).join("x")
-  const canonicalPair = `2x${gameState.targetNumber}`
-  if (gameState.foundPairs.has(normalizedPair)) {
-    handleZoneWrong("이미 찾은 조합이에요!")
-    return
-  }
-  if (normalizedPair !== canonicalPair || firstValue * secondValue !== expectedResult) {
-    handleZoneWrong("아직 맞는 2배 조합이 아니에요!")
-    return
-  }
-  gameState.foundPairs.add(normalizedPair)
-  handleZoneCorrect()
-}
-
-function handleZoneKeypadNumber(value) {
-  gameState.inputs[activeSlot] = value
-  updateEquationView()
-  setActiveSlot(activeSlot === "a" ? "b" : "a")
 }
 
 function bindKeypad(keypadElement, handlers) {

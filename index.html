@@ -304,29 +304,35 @@
           </div>
 
           <section class="play-panel play-panel--zone">
-            <p class="play-panel__hint" id="gameHelper">A와 B를 입력해서 2배 조합을 완성해요.</p>
-            <div class="equation-board" aria-label="2배 존 수식">
+            <div class="zone-target-hero">
+              <span class="zone-target-hero__label">목표 숫자</span>
+              <strong class="zone-target-hero__value" id="zoneTargetN">8</strong>
+            </div>
+
+            <div class="zone-factor-tiles" id="zoneFactorTiles" aria-label="조합 타일"></div>
+
+            <div class="zone-circle-preview" id="zoneCirclePreview" aria-live="polite" hidden></div>
+
+            <p class="play-panel__hint" id="gameHelper">두 수를 곱해서 목표 숫자가 나오는 조합을 찾아봐요!</p>
+
+            <div class="equation-board" aria-label="곱셈 입력">
               <button class="equation-slot is-active" id="slotA" type="button" data-slot="a">
-                <span>A</span>
+                <span>?</span>
                 <strong id="slotAValue">?</strong>
               </button>
               <span class="equation-operator">×</span>
               <button class="equation-slot" id="slotB" type="button" data-slot="b">
-                <span>B</span>
+                <span>?</span>
                 <strong id="slotBValue">?</strong>
               </button>
               <span class="equation-operator">=</span>
               <div class="equation-result">
-                <span>C</span>
-                <strong id="resultValue">2</strong>
+                <span>목표</span>
+                <strong id="resultValue">8</strong>
               </div>
             </div>
-            <div class="zone-target">
-              <span>목표 조합</span>
-              <strong id="targetLabel">2 x 1</strong>
-              <span>= <strong id="targetValue">2</strong></span>
-            </div>
-            <p class="zone-found">찾은 조합 <strong id="foundCount">0 / 9</strong></p>
+
+            <p class="zone-found">찾은 조합 <strong id="foundCount">0 / 2</strong></p>
           </section>
 
           <div class="keypad" id="zoneKeypad" aria-label="숫자 패드">
@@ -355,6 +361,14 @@
   <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
   <div class="celebration-popup" id="celebrationPopup" aria-live="polite" aria-atomic="true">
     <strong>구구팡에게 힘을 줬어요!</strong>
+  </div>
+
+  <div class="zone-clear-popup" id="zoneClearPopup" aria-live="polite" aria-atomic="true">
+    <div class="zone-clear-popup__content">
+      <p class="zone-clear-popup__kicker">보너스 존 클리어!</p>
+      <p class="zone-clear-popup__message" id="zoneClearMessage">모든 조합을 찾았어요!</p>
+      <p class="zone-clear-popup__reward" id="zoneClearReward">+100 ⚡</p>
+    </div>
   </div>
 
   <div class="level-clear-popup" id="levelClearPopup" aria-live="polite" aria-atomic="true">

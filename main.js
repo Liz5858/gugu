@@ -42,8 +42,6 @@ const zoneComboCount = document.getElementById("zoneComboCount")
 const zoneComboFill = document.getElementById("zoneComboFill")
 const zonePlayerName = document.getElementById("zonePlayerName")
 const foundCount = document.getElementById("foundCount")
-const targetLabel = document.getElementById("targetLabel")
-const targetValue = document.getElementById("targetValue")
 const resultValue = document.getElementById("resultValue")
 const gameHelper = document.getElementById("gameHelper")
 const slotAButton = document.getElementById("slotA")
@@ -168,7 +166,7 @@ bindKeypad(zoneKeypad, {
   onNumber: handleZoneKeypadNumber,
   onClear: () => {
     gameState.inputs[activeSlot] = ""
-    updateEquationView()
+    updateZoneView()
   },
   onSubmit: submitZoneEquation,
 })
