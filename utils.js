@@ -1,9 +1,17 @@
 const storageKey = "gugumon-player-name"
 const clearedLevelsKeyPrefix = "gugumon-cleared-levels"
 const defaultName = "댕댕"
+const SUB_LEVELS_PER_DAN = 19
+const PROBLEMS_PER_STAGE = 19
+const BASIC_LEVEL_MAX = 9
+const SPEED_BONUS_FAST_MS = 2000
+const SPEED_BONUS_MID_MS = 4000
+const LEVEL_UP_AVG_TIME_MS = 3000
+const LEVEL_UP_MIN_MASTERY = 150
 
 let toastTimer
 let popupTimer
+let levelClearTimer
 let activeSlot = "a"
 
 const gameState = {
@@ -16,11 +24,268 @@ const gameState = {
 
 const playState = {
   multiplier: 2,
-  multiplicand: 2,
+  multiplicand: 1,
+  subLevel: 1,
   answerInput: "",
-  groupCount: 0,
-  solved: 0,
-  total: 18,
+  currentDan: 2,
+  currentTimes: 1,
+  bundleCount: 0,
+  isSwapped: false,
+  questionsAnswered: 0,
+  questionStartTime: 0,
+  stageCombo: 0,
+  sessionResults: [],
+}
+
+function syncBundleStateFromQuestion() {
+  playState.currentDan = playState.multiplier
+  playState.currentTimes = playState.multiplicand
+}
+
+function getBundleUiElements() {
+  return {
+    totalDisplay: document.getElementById("total-text-display"),
+    circleArea: document.getElementById("circle-display-area"),
+    circleBundles: document.getElementById("circleBundles"),
+    addBundleBtn: document.getElementById("add-bundle-btn"),
+    swapBtn: document.getElementById("swap-btn"),
+    playHintEl: document.getElementById("playHint"),
+  }
+}
+
+function getBundleMaxCount() {
+  return playState.currentTimes
+}
+
+function ensureBundleButtonsVisible() {
+  const { addBundleBtn, swapBtn } = getBundleUiElements()
+
+  if (addBundleBtn) {
+    addBundleBtn.hidden = false
+    addBundleBtn.style.removeProperty("display")
+    addBundleBtn.style.removeProperty("visibility")
+  }
+
+  if (swapBtn) {
+    swapBtn.hidden = false
+    swapBtn.style.removeProperty("display")
+    swapBtn.style.removeProperty("visibility")
+  }
+}
+
+function updateTotalDisplay() {
+  const { totalDisplay } = getBundleUiElements()
+  if (!totalDisplay) return
+
+  const bundleCount = playState.bundleCount
+  const currentDan = playState.currentDan
+  const maxBundles = getBundleMaxCount()
+
+  if (bundleCount === 0) {
+    totalDisplay.textContent = ""
+    return
+  }
+
+  const valuesToShow = bundleCount === maxBundles ? bundleCount - 1 : bundleCount
+  const parts = []
+
+  for (let i = 1; i <= valuesToShow; i += 1) {
+    parts.push(String(i * currentDan))
+  }
+
+  if (bundleCount === maxBundles) {
+    parts.push("?")
+  }
+
+  totalDisplay.textContent = parts.join(" ")
+}
+
+function renderBundleCircles() {
+  const { circleArea, circleBundles } = getBundleUiElements()
+  if (!circleArea || !circleBundles) return
+
+  circleBundles.innerHTML = ""
+
+  if (playState.bundleCount === 0) {
+    circleArea.classList.remove("circle-area--active")
+    return
+  }
+
+  circleArea.classList.add("circle-area--active")
+
+  for (let bundleIndex = 0; bundleIndex < playState.bundleCount; bundleIndex += 1) {
+    const bundle = document.createElement("div")
+    bundle.className = "circle-bundle"
+    if (bundleIndex === playState.bundleCount - 1) {
+      bundle.classList.add("circle-bundle--new")
+    }
+
+    for (let dotIndex = 0; dotIndex < playState.currentDan; dotIndex += 1) {
+      const dot = document.createElement("div")
+      dot.className = "circle-dot"
+      dot.setAttribute("aria-hidden", "true")
+      bundle.appendChild(dot)
+    }
+
+    circleBundles.appendChild(bundle)
+  }
+}
+
+function updateAddBundleButton() {
+  const { addBundleBtn } = getBundleUiElements()
+  if (!addBundleBtn) return
+
+  const isComplete = playState.bundleCount >= getBundleMaxCount()
+  addBundleBtn.disabled = isComplete
+  addBundleBtn.classList.toggle("action-btn--disabled", isComplete)
+  ensureBundleButtonsVisible()
+}
+
+function syncBundleUi() {
+  updateTotalDisplay()
+  renderBundleCircles()
+  updateAddBundleButton()
+  ensureBundleButtonsVisible()
+}
+
+function resetBundleControls() {
+  playState.bundleCount = 0
+  syncBundleUi()
+}
+
+function setBundleHint(message) {
+  const { playHintEl } = getBundleUiElements()
+  if (playHintEl) playHintEl.textContent = message
+}
+
+function addOneBundle() {
+  const maxBundles = getBundleMaxCount()
+  if (playState.bundleCount >= maxBundles) return
+
+  playState.bundleCount += 1
+  syncBundleUi()
+
+  if (playState.bundleCount === maxBundles) {
+    setBundleHint("모든 묶음을 만들었어요! 이제 [확인] 버튼으로 정답을 입력해 보세요.")
+    return
+  }
+
+  setBundleHint(`${playState.currentDan}씩 묶음 ${playState.bundleCount}/${maxBundles}개를 만들었어요!`)
+}
+
+function swapBundleOrder() {
+  const tempDan = playState.currentDan
+  playState.currentDan = playState.currentTimes
+  playState.currentTimes = tempDan
+  playState.isSwapped = !playState.isSwapped
+  playState.bundleCount = 0
+
+  updatePlayView()
+  syncBundleUi()
+  setBundleHint(`${playState.currentDan}×${playState.currentTimes} 순서로 다시 묶어 봐요!`)
+}
+
+function initBundleControls() {
+  ensureBundleButtonsVisible()
+  syncBundleUi()
+}
+
+function calculateMastery(timeMs, isCorrect, combo) {
+  if (!isCorrect) return 0
+
+  const baseScore = 100
+  let speedBonus = 0
+  if (timeMs <= SPEED_BONUS_FAST_MS) speedBonus = 100
+  else if (timeMs <= SPEED_BONUS_MID_MS) speedBonus = 50
+
+  return (baseScore + speedBonus) * (1 + combo * 0.1)
+}
+
+function checkLevelUp(sessionResults) {
+  if (sessionResults.length < PROBLEMS_PER_STAGE) {
+    return { passed: false, reason: "incomplete", accuracy: 0, avgTime: 0, avgMastery: 0 }
+  }
+
+  const total = sessionResults.length
+  const correctCount = sessionResults.filter((result) => result.isCorrect).length
+  const accuracy = correctCount / total
+  const avgTime = sessionResults.reduce((sum, result) => sum + result.timeMs, 0) / total
+  const avgMastery = sessionResults.reduce((sum, result) => sum + result.masteryScore, 0) / total
+
+  if (accuracy < 1) {
+    return { passed: false, reason: "accuracy", accuracy, avgTime, avgMastery }
+  }
+  if (avgTime > LEVEL_UP_AVG_TIME_MS) {
+    return { passed: false, reason: "speed", accuracy, avgTime, avgMastery }
+  }
+  if (avgMastery < LEVEL_UP_MIN_MASTERY) {
+    return { passed: false, reason: "mastery", accuracy, avgTime, avgMastery }
+  }
+
+  return { passed: true, reason: "clear", accuracy, avgTime, avgMastery }
+}
+
+function getSessionSummary(sessionResults = playState.sessionResults) {
+  const count = sessionResults.length
+  if (count === 0) {
+    return { avgTime: 0, avgMastery: 0, accuracy: 0 }
+  }
+
+  const correctCount = sessionResults.filter((result) => result.isCorrect).length
+  return {
+    avgTime: sessionResults.reduce((sum, result) => sum + result.timeMs, 0) / count,
+    avgMastery: sessionResults.reduce((sum, result) => sum + result.masteryScore, 0) / count,
+    accuracy: correctCount / count,
+  }
+}
+
+function updateMasteryGauge() {
+  const masteryAvgTime = document.getElementById("masteryAvgTime")
+  const masteryGaugeFill = document.getElementById("masteryGaugeFill")
+  const masteryGaugeMeta = document.getElementById("masteryGaugeMeta")
+  const masteryGaugeHint = document.getElementById("masteryGaugeHint")
+  if (!masteryAvgTime || !masteryGaugeFill || !masteryGaugeMeta || !masteryGaugeHint) return
+
+  const { avgTime, avgMastery } = getSessionSummary()
+  const count = playState.sessionResults.length
+  const fillPercent = count === 0
+    ? 100
+    : Math.max(0, Math.min(100, (1 - avgTime / LEVEL_UP_AVG_TIME_MS) * 100))
+
+  masteryAvgTime.textContent = `${(avgTime / 1000).toFixed(1)}초`
+  masteryGaugeFill.style.width = `${fillPercent}%`
+  masteryGaugeFill.classList.toggle("mastery-gauge__fill--warning", count > 0 && avgTime > LEVEL_UP_AVG_TIME_MS)
+  masteryGaugeFill.classList.toggle("mastery-gauge__fill--good", count > 0 && avgTime <= LEVEL_UP_AVG_TIME_MS)
+  masteryGaugeMeta.textContent = `${count} / ${PROBLEMS_PER_STAGE} · 평균 숙련도 ${Math.round(avgMastery)}점`
+
+  if (count === 0) {
+    masteryGaugeHint.textContent = "3초 안에 풀면 통과에 가까워져요!"
+    return
+  }
+
+  if (avgTime <= LEVEL_UP_AVG_TIME_MS && avgMastery >= LEVEL_UP_MIN_MASTERY) {
+    masteryGaugeHint.textContent = "속도와 숙련도가 통과 기준에 도달했어요!"
+    return
+  }
+
+  if (avgTime > LEVEL_UP_AVG_TIME_MS) {
+    masteryGaugeHint.textContent = "조금만 더 빨리! 평균 3초 이내가 목표예요."
+    return
+  }
+
+  masteryGaugeHint.textContent = `숙련도 ${LEVEL_UP_MIN_MASTERY}점 이상을 노려봐요!`
+}
+
+function updatePlanetVisual(dan, growthStage) {
+  const planet = document.querySelector(`.planet[data-level="${dan}"]`)
+  if (!planet) return
+
+  const progress = loadGugudanProgress(dan)
+  planet.style.setProperty("--growth-stage", growthStage)
+  planet.classList.remove("planet--growing")
+  void planet.offsetWidth
+  planet.classList.add("planet--growing")
+  applyPlanetGrowth(planet, progress)
 }
 
 function showToast(message) {
@@ -69,9 +334,67 @@ function loadCurrentUser() {
   const hasSavedName = Boolean(savedName)
   const name = savedName || defaultName
   renderCurrentUser(name)
+  renderLevelMap()
   friendCardHint.textContent = hasSavedName
     ? "저장된 이름을 눌러 바로 시작해요."
     : "이름을 적고 친구 추가를 누르면 저장돼요."
+}
+
+function getGugudanStorageKey(dan) {
+  return `gugudan_${dan}_${getCurrentPlayerName()}`
+}
+
+function getDefaultGugudanProgress() {
+  return { currentLevel: 1, isCompleted: false }
+}
+
+function loadGugudanProgress(dan) {
+  const raw = localStorage.getItem(getGugudanStorageKey(dan))
+  if (!raw) return getDefaultGugudanProgress()
+  try {
+    const parsed = JSON.parse(raw)
+    return {
+      currentLevel: Math.min(Math.max(Number(parsed.currentLevel) || 1, 1), SUB_LEVELS_PER_DAN + 1),
+      isCompleted: Boolean(parsed.isCompleted),
+    }
+  } catch {
+    return getDefaultGugudanProgress()
+  }
+}
+
+function saveGugudanProgress(dan, progress) {
+  localStorage.setItem(getGugudanStorageKey(dan), JSON.stringify(progress))
+}
+
+function getGrowthStage(progress) {
+  if (progress.isCompleted) return SUB_LEVELS_PER_DAN
+  return Math.max(0, progress.currentLevel - 1)
+}
+
+function advanceGugudanProgress(dan) {
+  const progress = loadGugudanProgress(dan)
+  if (progress.isCompleted) return progress
+
+  const nextLevel = progress.currentLevel + 1
+  if (nextLevel > SUB_LEVELS_PER_DAN) {
+    const completed = { currentLevel: SUB_LEVELS_PER_DAN + 1, isCompleted: true }
+    saveGugudanProgress(dan, completed)
+    return completed
+  }
+
+  const updated = { currentLevel: nextLevel, isCompleted: false }
+  saveGugudanProgress(dan, updated)
+  return updated
+}
+
+function migrateOldClearedLevels() {
+  const clearedLevels = loadClearedLevels()
+  clearedLevels.forEach((dan) => {
+    const progress = loadGugudanProgress(dan)
+    if (progress.currentLevel === 1 && !progress.isCompleted) {
+      saveGugudanProgress(dan, { currentLevel: SUB_LEVELS_PER_DAN + 1, isCompleted: true })
+    }
+  })
 }
 
 function getClearedLevelsStorageKey() {
@@ -85,35 +408,129 @@ function loadClearedLevels() {
 }
 
 function saveClearedLevel(level) {
-  const clearedLevels = loadClearedLevels()
-  clearedLevels.add(level)
-  localStorage.setItem(getClearedLevelsStorageKey(), JSON.stringify([...clearedLevels]))
+  saveGugudanProgress(level, { currentLevel: SUB_LEVELS_PER_DAN + 1, isCompleted: true })
   renderLevelMap()
 }
 
+function applyPlanetGrowth(planet, progress) {
+  const growthStage = getGrowthStage(progress)
+  planet.style.setProperty("--growth-stage", growthStage)
+  planet.classList.toggle("planet--completed", progress.isCompleted)
+  planet.classList.toggle("planet--cleared", growthStage > 0)
+
+  const progressEl = planet.querySelector(".planet__progress")
+  if (progressEl) {
+    progressEl.textContent = progress.isCompleted ? "완료" : `${growthStage}/${SUB_LEVELS_PER_DAN}`
+  }
+
+  const buddy = planet.querySelector(".planet__buddy")
+  if (buddy) {
+    buddy.textContent = progress.isCompleted ? "🪐" : growthStage > 0 ? "🐣" : "🌱"
+  }
+}
+
 function renderLevelMap() {
-  const clearedLevels = loadClearedLevels()
-  const buddyEmoji = "🐣"
+  migrateOldClearedLevels()
   planetButtons.forEach((planet) => {
-    const level = Number(planet.dataset.level)
-    const isCleared = clearedLevels.has(level)
-    planet.classList.toggle("planet--cleared", isCleared)
-    planet.querySelector(".planet__buddy").textContent = buddyEmoji
+    const dan = Number(planet.dataset.level)
+    applyPlanetGrowth(planet, loadGugudanProgress(dan))
   })
 }
 
-function startLevel(level) {
-  setupPlayGame(level)
+function showLevelResultPopup({ passed, dan, stageLevel, growthStage, isCompleted, result, onDone }) {
+  window.clearTimeout(levelClearTimer)
+
+  const levelClearPopup = document.getElementById("levelClearPopup")
+  const levelClearPlanet = document.getElementById("levelClearPlanet")
+  const levelClearKicker = document.getElementById("levelClearKicker")
+  const levelClearPlanetNumber = document.getElementById("levelClearPlanetNumber")
+  const levelClearMessage = document.getElementById("levelClearMessage")
+  const levelClearGrowth = document.getElementById("levelClearGrowth")
+
+  levelClearKicker.textContent = passed ? "Level Clear!" : "조금만 더 빨리!"
+  levelClearPlanetNumber.textContent = dan
+
+  if (passed) {
+    levelClearMessage.textContent = `레벨 마스터! ${dan}단 행성이 더 커졌어요!`
+    levelClearGrowth.textContent = isCompleted
+      ? `${dan}단 행성이 완전히 자랐어요! 평균 숙련도 ${Math.round(result.avgMastery)}점`
+      : `${stageLevel}단계 통과 · 평균 ${(result.avgTime / 1000).toFixed(1)}초 · 숙련도 ${Math.round(result.avgMastery)}점`
+  } else {
+    levelClearMessage.textContent = `${dan}단 ${stageLevel}단계를 다시 도전해요!`
+    if (result.reason === "accuracy") {
+      levelClearGrowth.textContent = `정확도 100%가 필요해요 · 평균 숙련도 ${Math.round(result.avgMastery)}점`
+    } else if (result.reason === "speed") {
+      levelClearGrowth.textContent = `평균 ${(result.avgTime / 1000).toFixed(1)}초 · 목표 3초 이내 · 숙련도 ${Math.round(result.avgMastery)}점`
+    } else if (result.reason === "mastery") {
+      levelClearGrowth.textContent = `평균 숙련도 ${Math.round(result.avgMastery)}점 · 목표 ${LEVEL_UP_MIN_MASTERY}점 이상`
+    } else {
+      levelClearGrowth.textContent = `평균 숙련도 ${Math.round(result.avgMastery)}점 · 평균 ${(result.avgTime / 1000).toFixed(1)}초`
+    }
+  }
+
+  levelClearPlanet.style.setProperty("--growth-stage", growthStage)
+  levelClearPlanet.classList.toggle("level-clear-popup__planet--completed", isCompleted)
+  levelClearPlanet.classList.remove("level-clear-popup__planet--growing")
+  void levelClearPlanet.offsetWidth
+  if (passed) levelClearPlanet.classList.add("level-clear-popup__planet--growing")
+
+  levelClearPopup.classList.toggle("level-clear-popup--fail", !passed)
+  levelClearPopup.classList.add("show")
+  if (passed) renderLevelMap()
+
+  levelClearTimer = window.setTimeout(() => {
+    levelClearPopup.classList.remove("show", "level-clear-popup--fail")
+    levelClearPlanet.classList.remove("level-clear-popup__planet--growing")
+    if (typeof onDone === "function") onDone()
+  }, passed ? 2600 : 2200)
+}
+
+function showLevelClearPopup(dan, clearedLevel, growthStage, isCompleted, result, onDone) {
+  showLevelResultPopup({
+    passed: true,
+    dan,
+    stageLevel: clearedLevel,
+    growthStage,
+    isCompleted,
+    result,
+    onDone,
+  })
+}
+
+function showLevelFailPopup(dan, stageLevel, result, onDone) {
+  const growthStage = Math.max(0, stageLevel - 1)
+  showLevelResultPopup({
+    passed: false,
+    dan,
+    stageLevel,
+    growthStage,
+    isCompleted: false,
+    result,
+    onDone,
+  })
+}
+
+function startLevel(dan) {
+  const progress = loadGugudanProgress(dan)
+  if (progress.isCompleted) {
+    showToast(`${dan}단은 이미 완료했어요! 처음부터 다시 도전해요.`)
+    saveGugudanProgress(dan, getDefaultGugudanProgress())
+    renderLevelMap()
+  }
+
+  const activeProgress = loadGugudanProgress(dan)
+  const subLevel = Math.min(activeProgress.currentLevel, SUB_LEVELS_PER_DAN)
+  setupPlayGame(dan, subLevel)
   renderCurrentUser(getCurrentPlayerName())
   showScreen("game")
-  showToast(`${level}단 행성으로 출발해요!`)
+  showToast(`${dan}단 ${subLevel}단계 · 19문제 숙련도 챌린지!`)
 }
 
 function showScreen(screenName) {
   const screenMap = { home: homeScreen, main: mainScreen, levelmap: levelMapScreen, game: gameScreen, zone: zoneScreen }
   Object.entries(screenMap).forEach(([name, element]) => {
     const isVisible = name === screenName
-    element.style.display = isVisible ? "block" : "none"
+    element.style.display = isVisible ? "flex" : "none"
     element.classList.toggle("is-visible", isVisible)
   })
   const inGameContext = screenName === "game" || screenName === "zone"
@@ -136,31 +553,105 @@ function updateSharedHud() {
 }
 
 function updatePlayView() {
-  playMultiplier.textContent = playState.multiplier
-  playMultiplicand.textContent = playState.multiplicand
+  playMultiplier.textContent = playState.currentDan
+  playMultiplicand.textContent = playState.currentTimes
   playAnswerDisplay.textContent = playState.answerInput || "?"
-  playModeLabel.textContent = `곱셈 Lv.1 · ${playState.multiplier}단 시작`
-  playHint.textContent = `버튼을 눌러 ${playState.multiplier}씩 묶음을 만들어 봐요`
+  const modeLabel = playState.subLevel > BASIC_LEVEL_MAX ? "심화 속도전" : "기초 곱셈"
+  playModeLabel.textContent = `${playState.multiplier}단 · ${playState.subLevel}단계 (${modeLabel})`
+  playHint.textContent = `${playState.currentDan}×${playState.currentTimes} · ${playState.questionsAnswered + 1}/${PROBLEMS_PER_STAGE}번째 · 묶음을 만들어 봐요!`
 }
 
 function nextPlayQuestion() {
-  playState.multiplicand = Math.floor(Math.random() * 9) + 1
+  playState.multiplicand = playState.questionsAnswered + 1
   playState.answerInput = ""
-  playState.groupCount = 0
+  playState.bundleCount = 0
+  playState.isSwapped = false
+  playState.questionStartTime = Date.now()
+  syncBundleStateFromQuestion()
   updatePlayView()
+  resetBundleControls()
+  updateMasteryGauge()
 }
 
-function setupPlayGame(multiplier = 2) {
+function setupPlayGame(dan = 2, subLevel = 1) {
   gameState.bolts = 0
   gameState.combo = 0
   gameState.foundPairs = new Set()
   gameState.targetNumber = 1
-  playState.solved = 0
-  playState.multiplier = multiplier
+  playState.questionsAnswered = 0
+  playState.stageCombo = 0
+  playState.sessionResults = []
+  playState.multiplier = dan
+  playState.subLevel = subLevel
   updateSharedHud()
   nextPlayQuestion()
   resetZoneInputs()
   nextZoneTarget()
+}
+
+function finishStage() {
+  const dan = playState.multiplier
+  const stageLevel = playState.subLevel
+  const result = checkLevelUp(playState.sessionResults)
+
+  if (!result.passed) {
+    showLevelFailPopup(dan, stageLevel, result, () => {
+      setupPlayGame(dan, stageLevel)
+      showToast(`${dan}단 ${stageLevel}단계를 다시 도전해요!`)
+    })
+    return
+  }
+
+  const clearedLevel = stageLevel
+  const progress = advanceGugudanProgress(dan)
+  const growthStage = Math.min(clearedLevel, SUB_LEVELS_PER_DAN)
+  const isCompleted = progress.isCompleted
+
+  updatePlanetVisual(dan, growthStage)
+  showLevelClearPopup(dan, clearedLevel, growthStage, isCompleted, result, () => {
+    if (isCompleted) {
+      renderLevelMap()
+      showScreen("levelmap")
+      showToast(`${dan}단 행성이 완성됐어요!`)
+      return
+    }
+    setupPlayGame(dan, progress.currentLevel)
+  })
+}
+
+function recordPlayAnswer(isCorrect) {
+  const timeMs = Math.max(0, Date.now() - playState.questionStartTime)
+  const masteryScore = calculateMastery(timeMs, isCorrect, playState.stageCombo)
+
+  playState.sessionResults.push({ timeMs, isCorrect, masteryScore })
+  playState.questionsAnswered += 1
+
+  if (isCorrect) {
+    playState.stageCombo += 1
+    gameState.combo += 1
+    gameState.bolts += 10 * (gameState.combo / 10)
+  } else {
+    playState.stageCombo = 0
+    gameState.combo = 0
+  }
+
+  updateSharedHud()
+  updateMasteryGauge()
+
+  if (playState.questionsAnswered >= PROBLEMS_PER_STAGE) {
+    finishStage()
+    return true
+  }
+
+  return false
+}
+
+function handlePlayCorrect() {
+  const stageFinished = recordPlayAnswer(true)
+  if (stageFinished) return
+
+  showCelebration()
+  nextPlayQuestion()
 }
 
 function setupZoneGame(level) {
@@ -178,26 +669,15 @@ function setupZoneGame(level) {
   nextZoneTarget()
 }
 
-function handlePlayCorrect() {
-  gameState.combo += 1
-  gameState.bolts += 10 * (gameState.combo / 10)
-  playState.solved += 1
-  updateSharedHud()
-  showCelebration()
-  if (playState.solved >= playState.total) {
-    saveClearedLevel(playState.multiplier)
-    showToast(`${playState.multiplier}단 문제를 모두 맞혔어요!`)
-    return
-  }
-  nextPlayQuestion()
-}
-
 function handlePlayWrong(message) {
-  gameState.combo = 0
-  updateSharedHud()
+  const stageFinished = recordPlayAnswer(false)
   playState.answerInput = ""
   updatePlayView()
+
+  if (stageFinished) return
+
   showToast(message)
+  nextPlayQuestion()
 }
 
 function submitPlayAnswer() {
@@ -215,7 +695,8 @@ function submitPlayAnswer() {
 }
 
 function handlePlayKeypadNumber(value) {
-  if (playState.answerInput.length >= 2) return
+  const maxLength = playState.multiplier * playState.multiplicand >= 100 ? 3 : 2
+  if (playState.answerInput.length >= maxLength) return
   playState.answerInput += value
   updatePlayView()
 }

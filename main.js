@@ -33,7 +33,7 @@ const playHint = document.getElementById("playHint")
 const playMultiplier = document.getElementById("playMultiplier")
 const playMultiplicand = document.getElementById("playMultiplicand")
 const playAnswerDisplay = document.getElementById("playAnswerDisplay")
-const addGroupButton = document.getElementById("addGroupButton")
+const gameControlsContainer = document.getElementById("gameControlsContainer")
 const exitGameButton = document.getElementById("exitGameButton")
 const playKeypad = document.getElementById("playKeypad")
 
@@ -66,6 +66,7 @@ friendForm.addEventListener("submit", (event) => {
   }
   saveCurrentUser(name)
   friendNameInput.value = ""
+  renderLevelMap()
   showToast(`${name} 친구가 추가되었어요!`)
   showScreen("main")
 })
@@ -128,10 +129,23 @@ zoneBackButton.addEventListener("click", () => {
   showScreen("levelmap")
 })
 
-addGroupButton.addEventListener("click", () => {
-  playState.groupCount += 1
-  playHint.textContent = `${playState.multiplier}씩 묶음 ${playState.groupCount}개를 만들었어요!`
-})
+if (gameControlsContainer) {
+  gameControlsContainer.addEventListener("click", (event) => {
+    const button = event.target.closest("button")
+    if (!button) return
+
+    if (button.id === "add-bundle-btn") {
+      addOneBundle()
+      return
+    }
+
+    if (button.id === "swap-btn") {
+      swapBundleOrder()
+    }
+  })
+}
+
+initBundleControls()
 
 slotAButton.addEventListener("click", () => {
   setActiveSlot("a")
@@ -160,4 +174,5 @@ bindKeypad(zoneKeypad, {
 })
 
 loadCurrentUser()
+renderLevelMap()
 showScreen("home")

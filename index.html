@@ -37,7 +37,7 @@
 
             <div class="hero-copy">
               <p class="brand">GuGuPang <span> version 1.0</span></p>
-              <h1>친구 이름을 적고<br>바로 시작해요</h1>
+              <h1>이름을 적고<br>추가해 주세요</h1>
               <p class="subtitle">저장된 이름을 누르면 바로 메인 화면으로 이동해요.</p>
             </div>
 
@@ -45,7 +45,7 @@
               <div class="friend-avatar" id="friendCardAvatar" aria-hidden="true">댕</div>
               <div class="friend-meta">
                 <strong id="friendCardName">댕댕</strong>
-                <span id="friendCardHint">저장된 이름을 눌러 바로 시작해요.</span>
+                <span id="friendCardHint">여기를 눌러서 시작해요</span>
               </div>
               <span class="ghost-link">바로 시작</span>
             </button>
@@ -140,58 +140,74 @@
             </svg>
 
             <div class="planet" data-level="2" style="--planet-x: 50%; --planet-y: 7%;">
+              <span class="planet__ring" aria-hidden="true"></span>
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">2단</span>
+              <span class="planet__progress">0/19</span>
               <strong class="planet__number">2</strong>
               <button class="planet__satellite" type="button" data-level="2" aria-label="2배 존 2단">2×</button>
             </div>
             <div class="planet" data-level="3" style="--planet-x: 24%; --planet-y: 21%;">
+              <span class="planet__ring" aria-hidden="true"></span>
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">3단</span>
+              <span class="planet__progress">0/19</span>
               <strong class="planet__number">3</strong>
               <button class="planet__satellite" type="button" data-level="3" aria-label="2배 존 3단">2×</button>
             </div>
             <div class="planet" data-level="4" style="--planet-x: 76%; --planet-y: 32%;">
+              <span class="planet__ring" aria-hidden="true"></span>
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">4단</span>
+              <span class="planet__progress">0/19</span>
               <strong class="planet__number">4</strong>
               <button class="planet__satellite" type="button" data-level="4" aria-label="2배 존 4단">2×</button>
             </div>
             <div class="planet" data-level="5" style="--planet-x: 35%; --planet-y: 44%;">
+              <span class="planet__ring" aria-hidden="true"></span>
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">5단</span>
+              <span class="planet__progress">0/19</span>
               <strong class="planet__number">5</strong>
               <button class="planet__satellite" type="button" data-level="5" aria-label="2배 존 5단">2×</button>
             </div>
             <div class="planet" data-level="6" style="--planet-x: 65%; --planet-y: 55%;">
+              <span class="planet__ring" aria-hidden="true"></span>
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">6단</span>
+              <span class="planet__progress">0/19</span>
               <strong class="planet__number">6</strong>
               <button class="planet__satellite" type="button" data-level="6" aria-label="2배 존 6단">2×</button>
             </div>
             <div class="planet" data-level="7" style="--planet-x: 26%; --planet-y: 67%;">
+              <span class="planet__ring" aria-hidden="true"></span>
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">7단</span>
+              <span class="planet__progress">0/19</span>
               <strong class="planet__number">7</strong>
               <button class="planet__satellite" type="button" data-level="7" aria-label="2배 존 7단">2×</button>
             </div>
             <div class="planet" data-level="8" style="--planet-x: 74%; --planet-y: 78%;">
+              <span class="planet__ring" aria-hidden="true"></span>
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">8단</span>
+              <span class="planet__progress">0/19</span>
               <strong class="planet__number">8</strong>
               <button class="planet__satellite" type="button" data-level="8" aria-label="2배 존 8단">2×</button>
             </div>
             <div class="planet" data-level="9" style="--planet-x: 50%; --planet-y: 90%;">
+              <span class="planet__ring" aria-hidden="true"></span>
               <span class="planet__glow" aria-hidden="true"></span>
               <span class="planet__buddy" aria-hidden="true">🐣</span>
               <span class="planet__label">9단</span>
+              <span class="planet__progress">0/19</span>
               <strong class="planet__number">9</strong>
               <button class="planet__satellite" type="button" data-level="9" aria-label="2배 존 9단">2×</button>
             </div>
@@ -200,26 +216,41 @@
       </div>
 
       <div class="screen" id="game-screen">
-        <section class="game-layout" aria-label="게임 플레이 화면">
-          <header class="game-hud">
-            <div class="game-hud__badge game-hud__badge--bolt">
-              <span aria-hidden="true">⚡</span>
-              <strong id="playBoltCount">0</strong>
-            </div>
-            <div class="game-hud__center">
-              <p class="game-hud__mode" id="playModeLabel">곱셈 Lv.1 · 2단 시작</p>
-              <p class="game-hud__player" id="playPlayerName">댕댕</p>
-            </div>
-            <button class="game-hud__exit" id="exitGameButton" type="button">나가기</button>
-          </header>
+        <section class="game-layout game-layout--play" aria-label="게임 플레이 화면">
+          <div class="game-status">
+            <header class="game-hud">
+              <div class="game-hud__badge game-hud__badge--bolt">
+                <span aria-hidden="true">⚡</span>
+                <strong id="playBoltCount">0</strong>
+              </div>
+              <div class="game-hud__center">
+                <p class="game-hud__mode" id="playModeLabel">곱셈 Lv.1 · 2단 시작</p>
+                <p class="game-hud__player" id="playPlayerName">댕댕</p>
+              </div>
+              <button class="game-hud__exit" id="exitGameButton" type="button">나가기</button>
+            </header>
 
-          <div class="combo-bar">
-            <span class="combo-bar__label">콤보</span>
-            <div class="combo-bar__track">
-              <div class="combo-bar__fill" id="playComboFill"></div>
-              <span class="combo-bar__egg" aria-hidden="true">🥚</span>
+            <div class="combo-bar">
+              <span class="combo-bar__label">콤보</span>
+              <div class="combo-bar__track">
+                <div class="combo-bar__fill" id="playComboFill"></div>
+                <span class="combo-bar__egg" aria-hidden="true">🥚</span>
+              </div>
+              <strong class="combo-bar__count" id="playComboCount">0</strong>
             </div>
-            <strong class="combo-bar__count" id="playComboCount">0</strong>
+
+            <div class="mastery-gauge" id="masteryGauge" aria-label="평균 속도 게이지">
+              <div class="mastery-gauge__header">
+                <span class="mastery-gauge__label">평균 속도</span>
+                <strong class="mastery-gauge__time" id="masteryAvgTime">0.0초</strong>
+              </div>
+              <div class="mastery-gauge__track">
+                <div class="mastery-gauge__fill" id="masteryGaugeFill"></div>
+                <span class="mastery-gauge__marker" aria-hidden="true"></span>
+              </div>
+              <p class="mastery-gauge__meta" id="masteryGaugeMeta">0 / 19 · 평균 숙련도 0점</p>
+              <p class="mastery-gauge__hint" id="masteryGaugeHint">3초 안에 풀면 통과에 가까워져요!</p>
+            </div>
           </div>
 
           <section class="play-panel">
@@ -231,8 +262,18 @@
               <span class="play-equation__op">=</span>
               <span class="play-equation__answer" id="playAnswerDisplay">?</span>
             </div>
-            <button class="group-button" id="addGroupButton" type="button">한 묶음 더하기</button>
           </section>
+
+          <div class="game-controls-container" id="gameControlsContainer">
+            <div id="circle-display-area" class="circle-area" aria-live="polite">
+              <div class="circle-area__totals" id="total-text-display"></div>
+              <div class="circle-area__bundles" id="circleBundles"></div>
+            </div>
+            <div class="button-group">
+              <button id="add-bundle-btn" class="action-btn" type="button">한 묶음 더하기</button>
+              <button id="swap-btn" class="action-btn action-btn--swap" type="button">순서 바꾸기</button>
+            </div>
+          </div>
 
           <div class="keypad" id="playKeypad" aria-label="숫자 패드">
             <button class="keypad-button" type="button" data-key="1">1</button>
@@ -327,6 +368,21 @@
   <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
   <div class="celebration-popup" id="celebrationPopup" aria-live="polite" aria-atomic="true">
     <strong>구구팡에게 힘을 줬어요!</strong>
+  </div>
+
+  <div class="level-clear-popup" id="levelClearPopup" aria-live="polite" aria-atomic="true">
+    <div class="level-clear-popup__content">
+      <p class="level-clear-popup__kicker" id="levelClearKicker">Level Clear!</p>
+      <div class="level-clear-popup__planet-wrap">
+        <div class="level-clear-popup__planet" id="levelClearPlanet">
+          <span class="level-clear-popup__ring" aria-hidden="true"></span>
+          <span class="level-clear-popup__glow" aria-hidden="true"></span>
+          <strong id="levelClearPlanetNumber">2</strong>
+        </div>
+      </div>
+      <p class="level-clear-popup__message" id="levelClearMessage">2단 1단계 클리어!</p>
+      <p class="level-clear-popup__growth" id="levelClearGrowth">행성이 자라고 있어요!</p>
+    </div>
   </div>
 
   <script src="./utils.js"></script>
