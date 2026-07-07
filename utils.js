@@ -14,6 +14,7 @@ let toastTimer
 let popupTimer
 let levelClearTimer
 let activeSlot = "a"
+let lastProblem = null
 
 const gameState = {
   bolts: 0,
@@ -599,8 +600,27 @@ function updatePlayView() {
   playHint.textContent = `${playState.currentDan}×${playState.currentTimes} · ${playState.questionsAnswered + 1}/${PROBLEMS_PER_STAGE}번째 · 묶음을 만들어 봐요!`
 }
 
+function formatProblemKey(multiplier, multiplicand) {
+  return `${multiplier}x${multiplicand}`
+}
+
+function generateRandomMultiplicand() {
+  const multiplier = playState.multiplier
+  let multiplicand = Math.floor(Math.random() * SUB_LEVELS_PER_DAN) + 1
+
+  while (lastProblem !== null && formatProblemKey(multiplier, multiplicand) === lastProblem) {
+    multiplicand = Math.floor(Math.random() * SUB_LEVELS_PER_DAN) + 1
+  }
+
+  return multiplicand
+}
+
 function nextPlayQuestion() {
-  playState.multiplicand = playState.questionsAnswered + 1
+  if (playState.questionsAnswered > 0) {
+    lastProblem = formatProblemKey(playState.multiplier, playState.multiplicand)
+  }
+
+  playState.multiplicand = generateRandomMultiplicand()
   playState.answerInput = ""
   playState.bundleCount = 0
   playState.isSwapped = false
@@ -618,6 +638,7 @@ function setupPlayGame(dan = 2, subLevel = 1) {
   gameState.combo = 0
   gameState.foundPairs = new Set()
   gameState.targetNumber = 1
+  lastProblem = null
   playState.questionsAnswered = 0
   playState.stageCombo = 0
   playState.powerValue = 0
