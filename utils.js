@@ -553,13 +553,21 @@ function updateComboBar(comboFillEl, comboCountEl, combo) {
   comboCountEl.textContent = combo
 }
 
-function updatePowerBar(fillEl, countEl, powerValue) {
+function getRequiredExp() {
+  return 100 + ((playState.multiplier - 2) * 10)
+}
+
+function updatePowerBar(fillEl, countEl, currentExp) {
   if (!fillEl || !countEl) return
 
-  const percent = Math.max(0, Math.min(100, powerValue))
+  const requiredExp = getRequiredExp()
+  const clampedExp = Math.max(0, Math.min(requiredExp, currentExp))
+  const percent = requiredExp > 0 ? (clampedExp / requiredExp) * 100 : 0
+
   fillEl.style.width = `${percent}%`
-  fillEl.setAttribute("aria-valuenow", String(percent))
-  countEl.textContent = percent
+  fillEl.setAttribute("aria-valuemax", String(requiredExp))
+  fillEl.setAttribute("aria-valuenow", String(clampedExp))
+  countEl.textContent = `${clampedExp} / ${requiredExp}`
 
   fillEl.classList.remove(
     "combo-bar__fill--stage-start",
@@ -584,28 +592,31 @@ function updatePowerBar(fillEl, countEl, powerValue) {
   if (marker) marker.style.left = `${percent}%`
 }
 
+function checkExpLevelUp() {
+  const requiredExp = getRequiredExp()
+  if (currentPower >= requiredExp) {
+    currentPower -= requiredExp
+    handleExpLevelUp()
+  }
+}
+
+function handleExpLevelUp() {
+  showCelebration()
+  showToast("숙련도 레벨업! 대단해요!")
+}
+
 function updatePowerGauge(amount) {
   currentPower += amount
-  if (currentPower > 100) currentPower = 100
   if (currentPower < 0) currentPower = 0
 
-  const powerBarEl = document.getElementById("power-bar")
-  if (powerBarEl) {
-    powerBarEl.style.width = `${currentPower}%`
-  }
+  checkExpLevelUp()
 
-  updatePowerBar(powerBarEl || powerBar, playComboCount, currentPower)
+  updatePowerBar(powerBar || document.getElementById("power-bar"), playComboCount, currentPower)
 }
 
 function resetPowerGauge() {
   currentPower = 0
-
-  const powerBarEl = document.getElementById("power-bar")
-  if (powerBarEl) {
-    powerBarEl.style.width = "0%"
-  }
-
-  updatePowerBar(powerBarEl || powerBar, playComboCount, 0)
+  updatePowerBar(powerBar || document.getElementById("power-bar"), playComboCount, 0)
 }
 
 function updateSharedHud() {
@@ -618,36 +629,38 @@ function updateSharedHud() {
   }
 }
 
+function updateLevelDisplay() {
+  const dan = playState.multiplier
+  const level = getDifficultyLevel(playState.subLevel)
+  playModeLabel.textContent = `${dan}단.Lv${level}`
+}
+
 function updatePlayView() {
   playMultiplier.textContent = playState.currentDan
   playMultiplicand.textContent = playState.currentTimes
   playAnswerDisplay.textContent = playState.answerInput || "?"
-  const level = getDifficultyLevel(playState.subLevel)
-  const levelLabelMap = { 1: "기초 구구단", 2: "5의 배수", 3: "두 자리 수" }
-  const modeLabel = levelLabelMap[level]
-  playModeLabel.textContent = `${playState.multiplier}단 · ${playState.subLevel}단계 (Lv.${level} ${modeLabel})`
+  updateLevelDisplay()
   playHint.textContent = `${playState.currentDan}×${playState.currentTimes} · ${playState.questionsAnswered + 1}/${PROBLEMS_PER_STAGE}번째 · 묶음을 만들어 봐요!`
 }
 
 function getDifficultyLevel(subLevel) {
-  if (subLevel <= 9) return 1
-  if (subLevel <= 14) return 2
-  return 3
+  if (subLevel <= 4) return 1
+  if (subLevel <= 8) return 2
+  if (subLevel <= 12) return 3
+  if (subLevel <= 16) return 4
+  return 5
 }
 
-function getMultiplicandPool(level) {
-  if (level === 1) {
-    return [1, 2, 3, 4, 5, 6, 7, 8, 9]
-  }
+function getMultiplierByLevel(level) {
+  if (level === 1) return Math.floor(Math.random() * 9) + 1
   if (level === 2) {
-    return [5, 10, 15, 20]
+    const multiples = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+    return multiples[Math.floor(Math.random() * multiples.length)]
   }
-  return [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-}
-
-function getAllowedMultiplicands() {
-  const level = getDifficultyLevel(playState.subLevel)
-  return getMultiplicandPool(level)
+  if (level === 3) return Math.floor(Math.random() * 11) + 10
+  if (level === 4) return Math.floor(Math.random() * 11) + 20
+  if (level === 5) return Math.floor(Math.random() * 71) + 30
+  return 1
 }
 
 function formatProblemKey(multiplier, multiplicand) {
@@ -656,16 +669,14 @@ function formatProblemKey(multiplier, multiplicand) {
 
 function generateRandomMultiplicand() {
   const multiplier = playState.multiplier
-  const pool = getAllowedMultiplicands()
+  const level = getDifficultyLevel(playState.subLevel)
 
-  const pickFromPool = () => pool[Math.floor(Math.random() * pool.length)]
+  let multiplicand = getMultiplierByLevel(level)
 
-  let multiplicand = pickFromPool()
-
-  if (pool.length > 1) {
-    while (formatProblemKey(multiplier, multiplicand) === lastProblem) {
-      multiplicand = pickFromPool()
-    }
+  let guard = 0
+  while (formatProblemKey(multiplier, multiplicand) === lastProblem && guard < 20) {
+    multiplicand = getMultiplierByLevel(level)
+    guard += 1
   }
 
   return multiplicand
