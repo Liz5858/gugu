@@ -1,5 +1,6 @@
 const storageKey = "gugumon-player-name"
 const clearedLevelsKeyPrefix = "gugumon-cleared-levels"
+const BOLTS_STORAGE_KEY = "totalBolts"
 const defaultName = "댕댕"
 const SUB_LEVELS_PER_DAN = 19
 const PROBLEMS_PER_STAGE = 19
@@ -28,6 +29,21 @@ const gameState = {
   zoneDan: 2,
   zoneTargetN: 8,
   zoneFactorPairs: [],
+}
+
+function saveBolts() {
+  localStorage.setItem(BOLTS_STORAGE_KEY, String(gameState.bolts))
+}
+
+function loadBolts() {
+  const saved = localStorage.getItem(BOLTS_STORAGE_KEY)
+  gameState.bolts = saved === null ? 0 : Number(saved) || 0
+  return gameState.bolts
+}
+
+function resetStoredBolts() {
+  gameState.bolts = 0
+  localStorage.removeItem(BOLTS_STORAGE_KEY)
 }
 
 const playState = {
@@ -306,6 +322,8 @@ function loadCurrentUser() {
   const name = savedName || defaultName
   renderCurrentUser(name)
   renderLevelMap()
+  loadBolts()
+  updateSharedHud()
   friendCardHint.textContent = hasSavedName
     ? "저장된 이름을 눌러 바로 시작해요."
     : "이름을 적고 친구 추가를 누르면 저장돼요."
@@ -620,9 +638,9 @@ function nextPlayQuestion() {
 }
 
 function setupPlayGame(dan = 2, subLevel = 1) {
-  gameState.bolts = 0
   gameState.combo = 0
   gameState.foundPairs = new Set()
+  loadBolts()
   lastProblem = null
   currentPower = 0
   playState.questionsAnswered = 0
@@ -676,6 +694,7 @@ function recordPlayAnswer(isCorrect) {
     playState.stageCombo += 1
     gameState.combo += 1
     gameState.bolts += 10 * (gameState.combo / 10)
+    saveBolts()
   } else {
     playState.stageCombo = 0
     gameState.combo = 0
@@ -842,8 +861,8 @@ function startNextZoneRound() {
 }
 
 function setupZoneGame(dan) {
-  gameState.bolts = 0
   gameState.combo = 0
+  loadBolts()
   gameState.zoneDan = dan
   startNextZoneRound()
   updateSharedHud()
@@ -868,6 +887,7 @@ function handleZoneCorrect(a, b) {
   gameState.foundPairs.add(key)
   gameState.combo += 1
   gameState.bolts += ZONE_PAIR_BOLT_REWARD
+  saveBolts()
 
   renderZoneFactorTiles()
   renderZoneCirclePreview(a, b)
@@ -880,6 +900,7 @@ function handleZoneCorrect(a, b) {
 
   if (gameState.foundPairs.size >= gameState.zoneFactorPairs.length) {
     gameState.bolts += ZONE_CLEAR_BOLT_BONUS
+    saveBolts()
     updateSharedHud()
     showZoneClearPopup(ZONE_CLEAR_BOLT_BONUS, () => {
       startNextZoneRound()
