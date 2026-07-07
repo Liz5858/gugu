@@ -1,6 +1,6 @@
 const storageKey = "gugumon-player-name"
 const clearedLevelsKeyPrefix = "gugumon-cleared-levels"
-const BOLTS_STORAGE_KEY = "totalBolts"
+const BOLTS_STORAGE_KEY = "userBolts"
 const defaultName = "댕댕"
 const SUB_LEVELS_PER_DAN = 19
 const PROBLEMS_PER_STAGE = 19
@@ -10,7 +10,10 @@ const SPEED_BONUS_MID_MS = 4000
 const LEVEL_UP_AVG_TIME_MS = 3000
 const LEVEL_UP_MIN_MASTERY = 150
 const ZONE_PAIR_BOLT_REWARD = 15
-const ZONE_CLEAR_BOLT_BONUS = 100
+
+function getZoneClearBoltBonus(zoneDan) {
+  return (zoneDan - 1) * 10
+}
 
 let toastTimer
 let popupTimer
@@ -31,19 +34,34 @@ const gameState = {
   zoneFactorPairs: [],
 }
 
-function saveBolts() {
-  localStorage.setItem(BOLTS_STORAGE_KEY, String(gameState.bolts))
+function loadUserBoltsMap() {
+  const raw = localStorage.getItem(BOLTS_STORAGE_KEY)
+  if (!raw) return {}
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === "object" ? parsed : {}
+  } catch {
+    return {}
+  }
 }
 
-function loadBolts() {
-  const saved = localStorage.getItem(BOLTS_STORAGE_KEY)
-  gameState.bolts = saved === null ? 0 : Number(saved) || 0
+function saveBolts(userName = getCurrentPlayerName()) {
+  const boltsMap = loadUserBoltsMap()
+  boltsMap[userName] = gameState.bolts
+  localStorage.setItem(BOLTS_STORAGE_KEY, JSON.stringify(boltsMap))
+}
+
+function loadBolts(userName = getCurrentPlayerName()) {
+  const boltsMap = loadUserBoltsMap()
+  gameState.bolts = Number(boltsMap[userName]) || 0
   return gameState.bolts
 }
 
-function resetStoredBolts() {
+function resetStoredBolts(userName = getCurrentPlayerName()) {
   gameState.bolts = 0
-  localStorage.removeItem(BOLTS_STORAGE_KEY)
+  const boltsMap = loadUserBoltsMap()
+  delete boltsMap[userName]
+  localStorage.setItem(BOLTS_STORAGE_KEY, JSON.stringify(boltsMap))
 }
 
 const playState = {
@@ -313,6 +331,8 @@ function renderCurrentUser(name) {
 function saveCurrentUser(name) {
   localStorage.setItem(storageKey, name)
   renderCurrentUser(name)
+  loadBolts(name)
+  updateSharedHud()
   friendCardHint.textContent = "저장된 이름을 눌러 바로 시작해요."
 }
 
@@ -602,9 +622,32 @@ function updatePlayView() {
   playMultiplier.textContent = playState.currentDan
   playMultiplicand.textContent = playState.currentTimes
   playAnswerDisplay.textContent = playState.answerInput || "?"
-  const modeLabel = playState.subLevel > BASIC_LEVEL_MAX ? "심화 속도전" : "기초 곱셈"
-  playModeLabel.textContent = `${playState.multiplier}단 · ${playState.subLevel}단계 (${modeLabel})`
+  const level = getDifficultyLevel(playState.subLevel)
+  const levelLabelMap = { 1: "기초 구구단", 2: "5의 배수", 3: "두 자리 수" }
+  const modeLabel = levelLabelMap[level]
+  playModeLabel.textContent = `${playState.multiplier}단 · ${playState.subLevel}단계 (Lv.${level} ${modeLabel})`
   playHint.textContent = `${playState.currentDan}×${playState.currentTimes} · ${playState.questionsAnswered + 1}/${PROBLEMS_PER_STAGE}번째 · 묶음을 만들어 봐요!`
+}
+
+function getDifficultyLevel(subLevel) {
+  if (subLevel <= 9) return 1
+  if (subLevel <= 14) return 2
+  return 3
+}
+
+function getMultiplicandPool(level) {
+  if (level === 1) {
+    return [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  }
+  if (level === 2) {
+    return [5, 10, 15, 20]
+  }
+  return [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+}
+
+function getAllowedMultiplicands() {
+  const level = getDifficultyLevel(playState.subLevel)
+  return getMultiplicandPool(level)
 }
 
 function formatProblemKey(multiplier, multiplicand) {
@@ -613,10 +656,16 @@ function formatProblemKey(multiplier, multiplicand) {
 
 function generateRandomMultiplicand() {
   const multiplier = playState.multiplier
-  let multiplicand = Math.floor(Math.random() * SUB_LEVELS_PER_DAN) + 1
+  const pool = getAllowedMultiplicands()
 
-  while (lastProblem !== null && formatProblemKey(multiplier, multiplicand) === lastProblem) {
-    multiplicand = Math.floor(Math.random() * SUB_LEVELS_PER_DAN) + 1
+  const pickFromPool = () => pool[Math.floor(Math.random() * pool.length)]
+
+  let multiplicand = pickFromPool()
+
+  if (pool.length > 1) {
+    while (formatProblemKey(multiplier, multiplicand) === lastProblem) {
+      multiplicand = pickFromPool()
+    }
   }
 
   return multiplicand
@@ -899,10 +948,11 @@ function handleZoneCorrect(a, b) {
   }
 
   if (gameState.foundPairs.size >= gameState.zoneFactorPairs.length) {
-    gameState.bolts += ZONE_CLEAR_BOLT_BONUS
+    const clearBonus = getZoneClearBoltBonus(gameState.zoneDan)
+    gameState.bolts += clearBonus
     saveBolts()
     updateSharedHud()
-    showZoneClearPopup(ZONE_CLEAR_BOLT_BONUS, () => {
+    showZoneClearPopup(clearBonus, () => {
       startNextZoneRound()
       if (gameHelper) {
         gameHelper.textContent = `다음 목표 ${gameState.zoneTargetN}! 조합을 모두 찾아봐요!`

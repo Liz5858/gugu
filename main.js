@@ -76,6 +76,8 @@ savedFriendButton.addEventListener("click", () => {
     showToast("먼저 이름을 저장해 주세요.")
     return
   }
+  loadBolts(savedName)
+  updateSharedHud()
   showScreen("main")
 })
 
