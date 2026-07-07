@@ -230,11 +230,11 @@
               <button class="game-hud__exit" id="exitGameButton" type="button">나가기</button>
             </header>
 
-            <div class="combo-bar">
-              <span class="combo-bar__label">콤보</span>
+            <div class="combo-bar combo-bar--power" aria-label="파워 게이지">
+              <span class="combo-bar__label">파워</span>
               <div class="combo-bar__track">
-                <div class="combo-bar__fill" id="playComboFill"></div>
-                <span class="combo-bar__egg" aria-hidden="true">🥚</span>
+                <div class="combo-bar__fill" id="playComboFill" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+                <span class="combo-bar__egg" aria-hidden="true">⚡</span>
               </div>
               <strong class="combo-bar__count" id="playComboCount">0</strong>
             </div>

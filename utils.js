@@ -8,6 +8,7 @@ const SPEED_BONUS_FAST_MS = 2000
 const SPEED_BONUS_MID_MS = 4000
 const LEVEL_UP_AVG_TIME_MS = 3000
 const LEVEL_UP_MIN_MASTERY = 150
+const POWER_GAUGE_MAX_SCORE = 200
 
 let toastTimer
 let popupTimer
@@ -34,6 +35,7 @@ const playState = {
   questionsAnswered: 0,
   questionStartTime: 0,
   stageCombo: 0,
+  powerValue: 0,
   sessionResults: [],
 }
 
@@ -199,6 +201,11 @@ function calculateMastery(timeMs, isCorrect, combo) {
   else if (timeMs <= SPEED_BONUS_MID_MS) speedBonus = 50
 
   return (baseScore + speedBonus) * (1 + combo * 0.1)
+}
+
+function masteryToPowerPercent(masteryScore) {
+  if (masteryScore <= 0) return 0
+  return Math.min(100, Math.round((masteryScore / POWER_GAUGE_MAX_SCORE) * 100))
 }
 
 function checkLevelUp(sessionResults) {
@@ -544,10 +551,41 @@ function updateComboBar(comboFillEl, comboCountEl, combo) {
   comboCountEl.textContent = combo
 }
 
+function updatePowerBar(fillEl, countEl, powerValue) {
+  if (!fillEl || !countEl) return
+
+  const percent = Math.max(0, Math.min(100, powerValue))
+  fillEl.style.width = `${percent}%`
+  fillEl.setAttribute("aria-valuenow", String(percent))
+  countEl.textContent = percent
+
+  fillEl.classList.remove(
+    "combo-bar__fill--stage-start",
+    "combo-bar__fill--stage-focus",
+    "combo-bar__fill--stage-master",
+    "combo-bar__fill--pulse"
+  )
+
+  if (percent <= 30) {
+    fillEl.classList.add("combo-bar__fill--stage-start")
+  } else if (percent <= 70) {
+    fillEl.classList.add("combo-bar__fill--stage-focus")
+  } else if (percent > 0) {
+    fillEl.classList.add("combo-bar__fill--stage-master")
+  }
+
+  if (percent >= 100) {
+    fillEl.classList.add("combo-bar__fill--pulse")
+  }
+
+  const marker = fillEl.parentElement?.querySelector(".combo-bar__egg")
+  if (marker) marker.style.left = `${percent}%`
+}
+
 function updateSharedHud() {
   playBoltCount.textContent = gameState.bolts
   zoneBoltCount.textContent = gameState.bolts
-  updateComboBar(playComboFill, playComboCount, gameState.combo)
+  updatePowerBar(playComboFill, playComboCount, playState.powerValue)
   updateComboBar(zoneComboFill, zoneComboCount, gameState.combo)
   foundCount.textContent = `${gameState.foundPairs.size} / 9`
 }
@@ -566,10 +604,12 @@ function nextPlayQuestion() {
   playState.answerInput = ""
   playState.bundleCount = 0
   playState.isSwapped = false
+  playState.powerValue = 0
   playState.questionStartTime = Date.now()
   syncBundleStateFromQuestion()
   updatePlayView()
   resetBundleControls()
+  updatePowerBar(playComboFill, playComboCount, 0)
   updateMasteryGauge()
 }
 
@@ -580,6 +620,7 @@ function setupPlayGame(dan = 2, subLevel = 1) {
   gameState.targetNumber = 1
   playState.questionsAnswered = 0
   playState.stageCombo = 0
+  playState.powerValue = 0
   playState.sessionResults = []
   playState.multiplier = dan
   playState.subLevel = subLevel
@@ -627,10 +668,12 @@ function recordPlayAnswer(isCorrect) {
   playState.questionsAnswered += 1
 
   if (isCorrect) {
+    playState.powerValue = masteryToPowerPercent(masteryScore)
     playState.stageCombo += 1
     gameState.combo += 1
     gameState.bolts += 10 * (gameState.combo / 10)
   } else {
+    playState.powerValue = 0
     playState.stageCombo = 0
     gameState.combo = 0
   }
