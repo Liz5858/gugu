@@ -26,7 +26,7 @@ const celebrationPopup = document.getElementById("celebrationPopup")
 
 const playBoltCount = document.getElementById("playBoltCount")
 const playComboCount = document.getElementById("playComboCount")
-const playComboFill = document.getElementById("playComboFill")
+const powerBar = document.getElementById("power-bar")
 const playModeLabel = document.getElementById("playModeLabel")
 const playPlayerName = document.getElementById("playPlayerName")
 const playHint = document.getElementById("playHint")

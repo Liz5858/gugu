@@ -8,13 +8,13 @@ const SPEED_BONUS_FAST_MS = 2000
 const SPEED_BONUS_MID_MS = 4000
 const LEVEL_UP_AVG_TIME_MS = 3000
 const LEVEL_UP_MIN_MASTERY = 150
-const POWER_GAUGE_MAX_SCORE = 200
 
 let toastTimer
 let popupTimer
 let levelClearTimer
 let activeSlot = "a"
 let lastProblem = null
+let currentPower = 0
 
 const gameState = {
   bolts: 0,
@@ -36,7 +36,6 @@ const playState = {
   questionsAnswered: 0,
   questionStartTime: 0,
   stageCombo: 0,
-  powerValue: 0,
   sessionResults: [],
 }
 
@@ -204,11 +203,6 @@ function calculateMastery(timeMs, isCorrect, combo) {
   return (baseScore + speedBonus) * (1 + combo * 0.1)
 }
 
-function masteryToPowerPercent(masteryScore) {
-  if (masteryScore <= 0) return 0
-  return Math.min(100, Math.round((masteryScore / POWER_GAUGE_MAX_SCORE) * 100))
-}
-
 function checkLevelUp(sessionResults) {
   if (sessionResults.length < PROBLEMS_PER_STAGE) {
     return { passed: false, reason: "incomplete", accuracy: 0, avgTime: 0, avgMastery: 0 }
@@ -245,43 +239,6 @@ function getSessionSummary(sessionResults = playState.sessionResults) {
     avgMastery: sessionResults.reduce((sum, result) => sum + result.masteryScore, 0) / count,
     accuracy: correctCount / count,
   }
-}
-
-function updateMasteryGauge() {
-  const masteryAvgTime = document.getElementById("masteryAvgTime")
-  const masteryGaugeFill = document.getElementById("masteryGaugeFill")
-  const masteryGaugeMeta = document.getElementById("masteryGaugeMeta")
-  const masteryGaugeHint = document.getElementById("masteryGaugeHint")
-  if (!masteryAvgTime || !masteryGaugeFill || !masteryGaugeMeta || !masteryGaugeHint) return
-
-  const { avgTime, avgMastery } = getSessionSummary()
-  const count = playState.sessionResults.length
-  const fillPercent = count === 0
-    ? 100
-    : Math.max(0, Math.min(100, (1 - avgTime / LEVEL_UP_AVG_TIME_MS) * 100))
-
-  masteryAvgTime.textContent = `${(avgTime / 1000).toFixed(1)}초`
-  masteryGaugeFill.style.width = `${fillPercent}%`
-  masteryGaugeFill.classList.toggle("mastery-gauge__fill--warning", count > 0 && avgTime > LEVEL_UP_AVG_TIME_MS)
-  masteryGaugeFill.classList.toggle("mastery-gauge__fill--good", count > 0 && avgTime <= LEVEL_UP_AVG_TIME_MS)
-  masteryGaugeMeta.textContent = `${count} / ${PROBLEMS_PER_STAGE} · 평균 숙련도 ${Math.round(avgMastery)}점`
-
-  if (count === 0) {
-    masteryGaugeHint.textContent = "3초 안에 풀면 통과에 가까워져요!"
-    return
-  }
-
-  if (avgTime <= LEVEL_UP_AVG_TIME_MS && avgMastery >= LEVEL_UP_MIN_MASTERY) {
-    masteryGaugeHint.textContent = "속도와 숙련도가 통과 기준에 도달했어요!"
-    return
-  }
-
-  if (avgTime > LEVEL_UP_AVG_TIME_MS) {
-    masteryGaugeHint.textContent = "조금만 더 빨리! 평균 3초 이내가 목표예요."
-    return
-  }
-
-  masteryGaugeHint.textContent = `숙련도 ${LEVEL_UP_MIN_MASTERY}점 이상을 노려봐요!`
 }
 
 function updatePlanetVisual(dan, growthStage) {
@@ -583,10 +540,34 @@ function updatePowerBar(fillEl, countEl, powerValue) {
   if (marker) marker.style.left = `${percent}%`
 }
 
+function updatePowerGauge(amount) {
+  currentPower += amount
+  if (currentPower > 100) currentPower = 100
+  if (currentPower < 0) currentPower = 0
+
+  const powerBarEl = document.getElementById("power-bar")
+  if (powerBarEl) {
+    powerBarEl.style.width = `${currentPower}%`
+  }
+
+  updatePowerBar(powerBarEl || powerBar, playComboCount, currentPower)
+}
+
+function resetPowerGauge() {
+  currentPower = 0
+
+  const powerBarEl = document.getElementById("power-bar")
+  if (powerBarEl) {
+    powerBarEl.style.width = "0%"
+  }
+
+  updatePowerBar(powerBarEl || powerBar, playComboCount, 0)
+}
+
 function updateSharedHud() {
   playBoltCount.textContent = gameState.bolts
   zoneBoltCount.textContent = gameState.bolts
-  updatePowerBar(playComboFill, playComboCount, playState.powerValue)
+  updatePowerBar(powerBar, playComboCount, currentPower)
   updateComboBar(zoneComboFill, zoneComboCount, gameState.combo)
   foundCount.textContent = `${gameState.foundPairs.size} / 9`
 }
@@ -624,13 +605,10 @@ function nextPlayQuestion() {
   playState.answerInput = ""
   playState.bundleCount = 0
   playState.isSwapped = false
-  playState.powerValue = 0
   playState.questionStartTime = Date.now()
   syncBundleStateFromQuestion()
   updatePlayView()
   resetBundleControls()
-  updatePowerBar(playComboFill, playComboCount, 0)
-  updateMasteryGauge()
 }
 
 function setupPlayGame(dan = 2, subLevel = 1) {
@@ -639,13 +617,14 @@ function setupPlayGame(dan = 2, subLevel = 1) {
   gameState.foundPairs = new Set()
   gameState.targetNumber = 1
   lastProblem = null
+  currentPower = 0
   playState.questionsAnswered = 0
   playState.stageCombo = 0
-  playState.powerValue = 0
   playState.sessionResults = []
   playState.multiplier = dan
   playState.subLevel = subLevel
   updateSharedHud()
+  resetPowerGauge()
   nextPlayQuestion()
   resetZoneInputs()
   nextZoneTarget()
@@ -689,18 +668,16 @@ function recordPlayAnswer(isCorrect) {
   playState.questionsAnswered += 1
 
   if (isCorrect) {
-    playState.powerValue = masteryToPowerPercent(masteryScore)
     playState.stageCombo += 1
     gameState.combo += 1
     gameState.bolts += 10 * (gameState.combo / 10)
   } else {
-    playState.powerValue = 0
     playState.stageCombo = 0
     gameState.combo = 0
+    resetPowerGauge()
   }
 
   updateSharedHud()
-  updateMasteryGauge()
 
   if (playState.questionsAnswered >= PROBLEMS_PER_STAGE) {
     finishStage()
@@ -752,6 +729,7 @@ function submitPlayAnswer() {
   const expected = playState.multiplier * playState.multiplicand
   const answer = Number(playState.answerInput)
   if (answer === expected) {
+    updatePowerGauge(10)
     handlePlayCorrect()
     return
   }
