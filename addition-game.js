@@ -1,8 +1,9 @@
 /**
- * 덧셈 게임 UI + 숙련도(파워) 시스템
+ * 덧셈 게임 UI + 파워(Power) 시스템
  * - 전략 버튼 클릭 시 보조 수식 표시
  * - 가로/세로셈 전환 (은하계)
- * - 파워 게이지 Max 200 · 콤보 · 전략 보너스 · 오답 페널티
+ * - 파워 게이지 Max 200 · 콤보 가산 · 전략 보너스 · 오답 페널티
+ * ※ 곱셈 모드와 분리된 덧셈 전용 로직
  */
 
 const ADDITION_POWER_MAX = 200
@@ -11,8 +12,7 @@ const ADDITION_POWER_COMBO_BONUS = 5
 const ADDITION_POWER_STRATEGY_BONUS = 5
 const ADDITION_POWER_WRONG_PENALTY = -10
 const ADDITION_POWER_RETRY_REWARD = 10
-const ADDITION_MAX_POWER_LEVEL = 5
-const ADDITION_MAX_LEVEL_VOLT_BONUS = 10
+const ADDITION_POWER_VOLT_BONUS = 10
 
 const additionState = {
   galaxyId: null,
@@ -22,41 +22,36 @@ const additionState = {
   answerInput: "",
   activeStrategy: null,
   layout: ADDITION_LAYOUT.HORIZONTAL,
-  lastProblemKey: null,
+  recentProblemKeys: [],
   currentPower: 0,
-  comboCount: 0,
+  powerCombo: 0,
   totalVolts: 0,
-  powerLevel: 1,
+  stageCompleted: false,
   missedCurrentProblem: false,
   usedStrategyOnCurrent: false,
 }
 
-// ─── 숙련도(파워) 계산 ─────────────────────────────────────────
+// ─── 파워 점수 계산 ───────────────────────────────────────────
 
 /**
- * 정답/오답에 따른 파워 변화량 계산
- * @param {{ isCorrect: boolean, comboCount: number, usedStrategy: boolean, isRetry: boolean }} params
- * @returns {number}
+ * 정답/오답에 따른 파워 변화량(gainPower) 계산
+ * @param {{ isCorrect: boolean, powerCombo: number, usedStrategy: boolean, isRetry: boolean }} params
+ * @returns {number} gainPower
  *
  * 정답(일반): 기본 10 + (콤보-1)×5 + 전략 5
- *   1콤보 +10, 2콤보 +15, 3콤보 +20 ...
  * 재도전 정답: +10 (+ 전략 사용 시 +5)
  * 오답: -10
  */
-function calculatePowerGain({ isCorrect, comboCount, usedStrategy, isRetry }) {
+function calculatePowerGain({ isCorrect, powerCombo, usedStrategy, isRetry }) {
   if (!isCorrect) return ADDITION_POWER_WRONG_PENALTY
 
   if (isRetry) {
     return ADDITION_POWER_RETRY_REWARD + (usedStrategy ? ADDITION_POWER_STRATEGY_BONUS : 0)
   }
 
-  const comboBonus = Math.max(0, comboCount - 1) * ADDITION_POWER_COMBO_BONUS
+  const comboBonus = Math.max(0, powerCombo - 1) * ADDITION_POWER_COMBO_BONUS
   const strategyBonus = usedStrategy ? ADDITION_POWER_STRATEGY_BONUS : 0
   return ADDITION_POWER_BASE + comboBonus + strategyBonus
-}
-
-function isAdditionMaxPowerLevel() {
-  return additionState.powerLevel >= ADDITION_MAX_POWER_LEVEL
 }
 
 function syncAdditionVoltsToGameState() {
@@ -67,7 +62,6 @@ function syncAdditionVoltsToGameState() {
 function updateAdditionPowerBar() {
   const fillEl = document.getElementById("addition-power-bar")
   const countEl = document.getElementById("additionPowerCount")
-  const metaEl = document.getElementById("additionPowerMeta")
   const boltEl = document.getElementById("additionBoltCount")
 
   const power = additionState.currentPower
@@ -81,66 +75,68 @@ function updateAdditionPowerBar() {
   }
 
   if (countEl) countEl.textContent = `${power} / ${ADDITION_POWER_MAX}`
-  if (metaEl) {
-    metaEl.textContent = `콤보 ${additionState.comboCount} · 숙련 Lv${additionState.powerLevel}`
-  }
   if (boltEl) boltEl.textContent = additionState.totalVolts
 
   const marker = fillEl?.parentElement?.querySelector(".combo-bar__egg")
   if (marker) marker.style.left = `${percent}%`
 }
 
-function applyAdditionPowerDelta(delta) {
+/**
+ * 파워 점수 반영
+ * - 200 도달: 스테이지 완료(다음 단계 오픈)
+ * - 이미 완료된 스테이지에서 200 유지 시: 볼트 증가
+ */
+function applyAdditionPowerDelta(gainPower) {
   const previous = additionState.currentPower
-  let next = previous + delta
+  let next = previous + gainPower
   if (next < 0) next = 0
 
-  if (isAdditionMaxPowerLevel()) {
+  // 이미 완료된 단계: 게이지는 200 유지, 추가 정답 시 볼트
+  if (additionState.stageCompleted) {
     let awardedVolts = 0
-    if (next >= ADDITION_POWER_MAX) {
+    if (gainPower > 0) {
       additionState.currentPower = ADDITION_POWER_MAX
-      if (delta > 0) {
-        awardedVolts = ADDITION_MAX_LEVEL_VOLT_BONUS
-        additionState.totalVolts += awardedVolts
-        syncAdditionVoltsToGameState()
-      }
+      awardedVolts = ADDITION_POWER_VOLT_BONUS
+      additionState.totalVolts += awardedVolts
+      syncAdditionVoltsToGameState()
     } else {
-      additionState.currentPower = next
+      additionState.currentPower = Math.min(ADDITION_POWER_MAX, next)
     }
+    persistAdditionLevelProgress({ isCompleted: true })
     updateAdditionPowerBar()
     return {
-      leveledUp: false,
+      stageCleared: false,
       awardedVolts,
       previous,
       current: additionState.currentPower,
-      gain: delta,
+      gainPower,
     }
   }
 
+  // 파워 200 도달 → 스테이지 클리어 / 다음 단계 오픈
   if (next >= ADDITION_POWER_MAX) {
-    additionState.powerLevel = Math.min(
-      additionState.powerLevel + 1,
-      ADDITION_MAX_POWER_LEVEL
-    )
-    additionState.currentPower = isAdditionMaxPowerLevel() ? ADDITION_POWER_MAX : 0
+    additionState.currentPower = ADDITION_POWER_MAX
+    additionState.stageCompleted = true
+    persistAdditionLevelProgress({ isCompleted: true })
     updateAdditionPowerBar()
     return {
-      leveledUp: true,
+      stageCleared: true,
       awardedVolts: 0,
       previous,
-      current: additionState.currentPower,
-      gain: delta,
+      current: ADDITION_POWER_MAX,
+      gainPower,
     }
   }
 
   additionState.currentPower = next
+  persistAdditionLevelProgress()
   updateAdditionPowerBar()
   return {
-    leveledUp: false,
+    stageCleared: false,
     awardedVolts: 0,
     previous,
     current: next,
-    gain: delta,
+    gainPower,
   }
 }
 
@@ -149,14 +145,14 @@ function handleAdditionCorrectPower() {
   const isRetry = additionState.missedCurrentProblem
 
   if (isRetry) {
-    additionState.comboCount = 1
+    additionState.powerCombo = 1
   } else {
-    additionState.comboCount += 1
+    additionState.powerCombo += 1
   }
 
-  const gain = calculatePowerGain({
+  const gainPower = calculatePowerGain({
     isCorrect: true,
-    comboCount: additionState.comboCount,
+    powerCombo: additionState.powerCombo,
     usedStrategy,
     isRetry,
   })
@@ -164,71 +160,194 @@ function handleAdditionCorrectPower() {
   additionState.missedCurrentProblem = false
   additionState.usedStrategyOnCurrent = false
 
-  return applyAdditionPowerDelta(gain)
+  return applyAdditionPowerDelta(gainPower)
 }
 
 function handleAdditionWrongPower() {
-  additionState.comboCount = 0
+  additionState.powerCombo = 0
   additionState.missedCurrentProblem = true
 
-  const gain = calculatePowerGain({
+  const gainPower = calculatePowerGain({
     isCorrect: false,
-    comboCount: 0,
+    powerCombo: 0,
     usedStrategy: false,
     isRetry: false,
   })
 
-  return applyAdditionPowerDelta(gain)
+  return applyAdditionPowerDelta(gainPower)
 }
 
 function resetAdditionPowerSession() {
-  additionState.currentPower = 0
-  additionState.comboCount = 0
-  additionState.powerLevel = 1
+  const levelId = additionState.level?.id
+  const saved = levelId ? loadAdditionLevelProgress(levelId) : getDefaultAdditionLevelProgress()
+
+  additionState.currentPower = saved.isCompleted
+    ? ADDITION_POWER_MAX
+    : Math.min(ADDITION_POWER_MAX, saved.currentPower)
+  additionState.powerCombo = 0
+  additionState.stageCompleted = Boolean(saved.isCompleted)
   additionState.missedCurrentProblem = false
   additionState.usedStrategyOnCurrent = false
   additionState.totalVolts = gameState.bolts
   updateAdditionPowerBar()
 }
 
-// ─── 게임 진입 ───────────────────────────────────────────────
+function persistAdditionLevelProgress(overrides = {}) {
+  if (!additionState.level?.id) return
+
+  saveAdditionLevelProgress(additionState.level.id, {
+    currentPower: additionState.currentPower,
+    isCompleted:
+      overrides.isCompleted ??
+      (additionState.stageCompleted || additionState.currentPower >= ADDITION_POWER_MAX),
+    ...overrides,
+  })
+}
+
+let additionPowerMaxTimer = null
+
+function showAdditionPowerMaxFx(message = "다음 단계가 열렸어요!") {
+  const fx = document.getElementById("additionPowerMaxFx")
+  const particles = document.getElementById("additionPowerMaxParticles")
+  const messageEl = document.getElementById("additionPowerMaxMessage")
+  if (!fx) return
+
+  if (messageEl) messageEl.textContent = message
+
+  if (particles) {
+    particles.innerHTML = ""
+    const colors = ["#57f0b3", "#ffd45d", "#58cfff", "#ffb8cf", "#b07cff", "#ffffff"]
+    for (let i = 0; i < 28; i += 1) {
+      const spark = document.createElement("span")
+      spark.className = "addition-power-max__spark"
+      spark.style.setProperty("--spark-x", `${(Math.random() * 160 - 80).toFixed(1)}vw`)
+      spark.style.setProperty("--spark-y", `${(Math.random() * 120 - 20).toFixed(1)}vh`)
+      spark.style.setProperty("--spark-delay", `${(Math.random() * 0.35).toFixed(2)}s`)
+      spark.style.setProperty("--spark-color", colors[i % colors.length])
+      spark.style.setProperty("--spark-size", `${6 + Math.random() * 10}px`)
+      particles.appendChild(spark)
+    }
+  }
+
+  window.clearTimeout(additionPowerMaxTimer)
+  fx.classList.remove("is-show")
+  void fx.offsetWidth
+  fx.classList.add("is-show")
+
+  additionPowerMaxTimer = window.setTimeout(() => {
+    fx.classList.remove("is-show")
+  }, 2600)
+}
+
+// ─── 게임 진입 / 맵 렌더링 ─────────────────────────────────────
+
+function buildAdditionConstellationPath(nodes) {
+  return nodes
+    .map((node) => {
+      const x = Number.parseFloat(String(node.mapPosition.x))
+      const y = Number.parseFloat(String(node.mapPosition.y))
+      // % → viewBox(300×520) 좌표
+      return `${(x / 100) * 300},${(y / 100) * 520}`
+    })
+    .join(" ")
+}
+
+function applyAdditionPlanetVisual(planetEl, node, unlock) {
+  const { progress, status } = unlock
+  const power = Math.min(ADDITION_POWER_MAX, progress.currentPower || 0)
+  const powerBand = progress.isCompleted
+    ? 5
+    : Math.min(5, Math.max(1, Math.ceil((power / ADDITION_POWER_MAX) * 5) || 1))
+
+  planetEl.style.setProperty("--power-level", progress.isCompleted ? 1 : powerBand)
+  // 완료 행성은 기본 크기 유지 (확대 없음)
+  planetEl.style.setProperty(
+    "--growth-stage",
+    progress.isCompleted ? 0 : Math.round((power / ADDITION_POWER_MAX) * 12)
+  )
+
+  planetEl.classList.toggle("planet--locked", status === "locked")
+  planetEl.classList.toggle("planet--current", status === "current")
+  planetEl.classList.toggle("planet--completed", status === "completed")
+  planetEl.classList.toggle("planet--cleared", power > 0 || status === "completed")
+
+  for (let lv = 1; lv <= 5; lv += 1) {
+    planetEl.classList.toggle(
+      `planet--power-lv${lv}`,
+      !progress.isCompleted && powerBand === lv && status !== "locked"
+    )
+  }
+
+  const progressEl = planetEl.querySelector(".planet__progress")
+  if (progressEl) {
+    if (status === "locked") progressEl.textContent = "잠김"
+    else if (status === "completed") progressEl.textContent = "완료"
+    else progressEl.textContent = `${power}`
+  }
+
+  const buddy = planetEl.querySelector(".planet__buddy")
+  if (buddy) {
+    if (status === "locked") buddy.textContent = "🌑"
+    else if (status === "completed") buddy.textContent = "🪐"
+    else buddy.textContent = node.theme.buddy
+  }
+
+  planetEl.setAttribute("aria-disabled", status === "locked" ? "true" : "false")
+}
+
+function createAdditionPlanetElement(node) {
+  const unlock = getAdditionLevelUnlockState(node.levelId)
+  const planet = document.createElement("button")
+  planet.type = "button"
+  planet.className = "planet addition-planet"
+  planet.dataset.levelId = node.levelId
+  planet.dataset.galaxyId = node.galaxyId
+  planet.dataset.stage = String(node.stageNumber)
+  planet.style.setProperty("--planet-x", node.mapPosition.x)
+  planet.style.setProperty("--planet-y", node.mapPosition.y)
+  planet.setAttribute(
+    "aria-label",
+    `${node.galaxyName} ${node.label} · ${node.subtitle}`
+  )
+
+  planet.innerHTML = `
+    <span class="planet__ring" aria-hidden="true"></span>
+    <span class="planet__glow" aria-hidden="true"></span>
+    <span class="planet__buddy" aria-hidden="true">${node.theme.buddy}</span>
+    <span class="planet__label">${node.galaxyName}</span>
+    <span class="planet__progress">Lv${node.stageNumber}</span>
+    <strong class="planet__number">${node.stageNumber}</strong>
+  `
+
+  applyAdditionPlanetVisual(planet, node, unlock)
+
+  planet.addEventListener("click", () => {
+    const latest = getAdditionLevelUnlockState(node.levelId)
+    if (latest.isLocked) {
+      showToast("아직 잠긴 행성이에요. 이전 레벨을 먼저 완료해요!")
+      return
+    }
+    startAdditionLevel(node.galaxyId, node.stageNumber)
+  })
+
+  return planet
+}
 
 function renderAdditionMap() {
-  const container = document.getElementById("additionMapGroups")
-  if (!container) return
+  const map = document.getElementById("additionConstellationMap")
+  const linesSvg = document.getElementById("additionConstellationLines")
+  if (!map) return
 
-  container.innerHTML = ""
+  const nodes = getAllAdditionMapNodes()
 
-  ADDITION_GALAXIES.forEach((galaxy) => {
-    const section = document.createElement("section")
-    section.className = "addition-map-group"
-    section.innerHTML = `
-      <header class="addition-map-group__header">
-        <span class="addition-map-group__icon" aria-hidden="true">${galaxy.theme.buddy}</span>
-        <div>
-          <h3>${galaxy.name}</h3>
-          <p>${galaxy.subtitle}</p>
-        </div>
-      </header>
-      <div class="addition-map-group__levels"></div>
-    `
+  map.querySelectorAll(".addition-planet").forEach((el) => el.remove())
 
-    const levelsEl = section.querySelector(".addition-map-group__levels")
-    galaxy.levels.forEach((level) => {
-      const button = document.createElement("button")
-      button.type = "button"
-      button.className = "addition-map-level"
-      button.innerHTML = `
-        <strong>Lv${level.stageNumber}</strong>
-        <span>${level.name}</span>
-      `
-      button.addEventListener("click", () => {
-        startAdditionLevel(galaxy.id, level.stageNumber)
-      })
-      levelsEl.appendChild(button)
-    })
+  if (linesSvg) {
+    linesSvg.innerHTML = `<polyline points="${buildAdditionConstellationPath(nodes)}" />`
+  }
 
-    container.appendChild(section)
+  nodes.forEach((node) => {
+    map.appendChild(createAdditionPlanetElement(node))
   })
 }
 
@@ -239,11 +358,17 @@ function startAdditionLevel(galaxyId, stageNumber) {
     return
   }
 
+  const unlock = getAdditionLevelUnlockState(found.level.id)
+  if (unlock.isLocked) {
+    showToast("아직 잠긴 행성이에요. 이전 레벨을 먼저 완료해요!")
+    return
+  }
+
   additionState.galaxyId = galaxyId
   additionState.galaxyName = found.galaxy.name
   additionState.level = found.level
   additionState.layout = found.level.uiConfig.defaultLayout
-  additionState.lastProblemKey = null
+  additionState.recentProblemKeys = []
   additionState.activeStrategy = null
 
   loadBolts()
@@ -256,9 +381,13 @@ function startAdditionLevel(galaxyId, stageNumber) {
 
 function nextAdditionQuestion() {
   additionState.currentProblem = generateAdditionProblem(additionState.level, {
-    lastProblemKey: additionState.lastProblemKey,
+    recentProblemKeys: additionState.recentProblemKeys,
   })
-  additionState.lastProblemKey = additionFormatProblemKey(additionState.currentProblem)
+  const problemKey = additionFormatProblemKey(additionState.currentProblem)
+  additionState.recentProblemKeys.push(problemKey)
+  if (additionState.recentProblemKeys.length > ADDITION_RECENT_PROBLEM_LIMIT) {
+    additionState.recentProblemKeys.shift()
+  }
   additionState.answerInput = ""
   additionState.activeStrategy = null
   additionState.usedStrategyOnCurrent = false
@@ -269,6 +398,27 @@ function nextAdditionQuestion() {
 
 // ─── 메인 수식 렌더링 ─────────────────────────────────────────
 
+function isAdditionBlankProblem(problem) {
+  if (!problem) return false
+  return (
+    problem.operationType === ADDITION_OPERATION_TYPES.MAKE_TEN_COMPLEMENT ||
+    problem.operationType === ADDITION_OPERATION_TYPES.MISSING_ADDEND
+  )
+}
+
+/** 역산/? 문제의 최대 입력 자릿수 (정답 자릿수 기준, 1~2) */
+function getAdditionAnswerMaxDigits(problem) {
+  if (!problem) return 4
+  if (!isAdditionBlankProblem(problem)) return 4
+
+  const answerDigits = String(Math.abs(Number(problem.answer) || 0)).length
+  return Math.min(2, Math.max(1, answerDigits))
+}
+
+function getAdditionBlankDisplayValue() {
+  return additionState.answerInput === "" ? "?" : additionState.answerInput
+}
+
 function renderAdditionMainEquation(problem, layout) {
   const el = document.getElementById("additionMainEquation")
   if (!el || !problem) return
@@ -278,9 +428,11 @@ function renderAdditionMainEquation(problem, layout) {
   if (layout === ADDITION_LAYOUT.VERTICAL && problem.operationType === ADDITION_OPERATION_TYPES.STANDARD) {
     el.innerHTML = `
       <div class="addition-vertical">
-        <div class="addition-vertical__row addition-vertical__row--b">${problem.operandB}</div>
-        <div class="addition-vertical__row addition-vertical__row--op">+</div>
         <div class="addition-vertical__row addition-vertical__row--a">${problem.operandA}</div>
+        <div class="addition-vertical__row addition-vertical__row--addend">
+          <span class="addition-vertical__op" aria-hidden="true">+</span>
+          <span class="addition-vertical__num">${problem.operandB}</span>
+        </div>
         <div class="addition-vertical__line" aria-hidden="true"></div>
         <div class="addition-vertical__row addition-vertical__row--answer">${additionState.answerInput || "?"}</div>
       </div>
@@ -288,22 +440,17 @@ function renderAdditionMainEquation(problem, layout) {
     return
   }
 
-  if (problem.operationType === ADDITION_OPERATION_TYPES.MAKE_TEN_COMPLEMENT) {
-    el.innerHTML = buildHorizontalEquationHtml([
-      { text: String(problem.operandA), className: "addition-term" },
-      { text: "+", className: "play-equation__op" },
-      { text: "?", className: "addition-term addition-term--unknown" },
-      { text: "=", className: "play-equation__op" },
-      { text: String(problem.target), className: "addition-term addition-term--target" },
-    ])
-    return
-  }
+  if (isAdditionBlankProblem(problem)) {
+    const blankValue = getAdditionBlankDisplayValue()
+    const blankClass =
+      additionState.answerInput === ""
+        ? "addition-term addition-term--unknown"
+        : "addition-term addition-term--unknown addition-term--filled"
 
-  if (problem.operationType === ADDITION_OPERATION_TYPES.MISSING_ADDEND) {
     el.innerHTML = buildHorizontalEquationHtml([
-      { text: String(problem.operandA), className: "addition-term" },
+      { text: String(problem.operandA), className: "addition-term addition-term--a" },
       { text: "+", className: "play-equation__op" },
-      { text: "?", className: "addition-term addition-term--unknown" },
+      { text: blankValue, className: blankClass },
       { text: "=", className: "play-equation__op" },
       { text: String(problem.target), className: "addition-term addition-term--target" },
     ])
@@ -496,6 +643,12 @@ function updateAdditionLayoutToggle() {
 
   const show = levelSupportsLayoutToggle(level)
   toggle.hidden = !show
+  toggle.classList.toggle("is-visible", show)
+  toggle.setAttribute("aria-hidden", show ? "false" : "true")
+
+  if (!show) {
+    additionState.layout = ADDITION_LAYOUT.HORIZONTAL
+  }
 
   toggle.querySelectorAll(".addition-layout-toggle__btn").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.layout === additionState.layout)
@@ -539,8 +692,16 @@ function setAdditionLayout(layout) {
 // ─── 입력 처리 ───────────────────────────────────────────────
 
 function handleAdditionKeypadNumber(value) {
-  if (additionState.answerInput.length >= 4) return
+  const problem = additionState.currentProblem
+  const maxDigits = getAdditionAnswerMaxDigits(problem)
+  if (additionState.answerInput.length >= maxDigits) return
+
   additionState.answerInput += value
+  renderAdditionMainEquation(problem, additionState.layout)
+}
+
+function clearAdditionAnswerDigit() {
+  additionState.answerInput = additionState.answerInput.slice(0, -1)
   renderAdditionMainEquation(additionState.currentProblem, additionState.layout)
 }
 
@@ -549,20 +710,24 @@ function submitAdditionAnswer() {
   if (!problem) return
 
   if (additionState.answerInput === "") {
-    showToast("답을 입력해 주세요.")
+    showToast(
+      isAdditionBlankProblem(problem)
+        ? "? 자리에 숫자를 입력해 주세요."
+        : "답을 입력해 주세요."
+    )
     return
   }
 
   if (checkAdditionAnswer(problem, additionState.answerInput)) {
     const result = handleAdditionCorrectPower()
 
-    if (result.leveledUp) {
-      showToast(`숙련도 Lv${additionState.powerLevel}! 대단해요!`)
+    if (result.stageCleared) {
+      showAdditionPowerMaxFx("다음 단계가 열렸어요!")
     } else if (result.awardedVolts > 0) {
-      showToast(`만렙! 볼트 +${result.awardedVolts} ⚡`)
+      showToast(`파워 MAX 유지! 볼트 +${result.awardedVolts} ⚡`)
     } else {
-      const sign = result.gain >= 0 ? "+" : ""
-      showToast(`정답! 파워 ${sign}${result.gain}`)
+      const sign = result.gainPower >= 0 ? "+" : ""
+      showToast(`정답! 파워 ${sign}${result.gainPower}`)
     }
 
     nextAdditionQuestion()
@@ -571,7 +736,7 @@ function submitAdditionAnswer() {
   }
 
   const result = handleAdditionWrongPower()
-  showToast(`다시 생각해 봐요! (파워 ${result.gain})`)
+  showToast(`다시 생각해 봐요! (파워 ${result.gainPower})`)
   additionState.answerInput = ""
   renderAdditionMainEquation(additionState.currentProblem, additionState.layout)
   updateAdditionPowerBar()
@@ -600,6 +765,8 @@ function initAdditionGame() {
   })
 
   exitBtn?.addEventListener("click", () => {
+    persistAdditionLevelProgress()
+    renderAdditionMap()
     showScreen("additionmap")
   })
 
@@ -610,10 +777,7 @@ function initAdditionGame() {
   if (keypad) {
     bindKeypad(keypad, {
       onNumber: handleAdditionKeypadNumber,
-      onClear: () => {
-        additionState.answerInput = additionState.answerInput.slice(0, -1)
-        renderAdditionMainEquation(additionState.currentProblem, additionState.layout)
-      },
+      onClear: clearAdditionAnswerDigit,
       onSubmit: submitAdditionAnswer,
     })
   }

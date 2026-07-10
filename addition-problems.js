@@ -3,7 +3,8 @@
  * addition-levels.js 의 problemConfig 를 읽어 난이도별 문제를 생성합니다.
  */
 
-const ADDITION_GENERATION_MAX_ATTEMPTS = 60
+const ADDITION_GENERATION_MAX_ATTEMPTS = 80
+const ADDITION_RECENT_PROBLEM_LIMIT = 3
 
 // ─── 난수 유틸 ───────────────────────────────────────────────
 
@@ -38,9 +39,18 @@ function additionFormatProblemKey(problem) {
   return `${problem.operationType}:${problem.operandA}:${b}:${target}`
 }
 
-function additionIsDuplicateProblem(problem, lastProblemKey) {
-  if (!lastProblemKey) return false
-  return additionFormatProblemKey(problem) === lastProblemKey
+function normalizeRecentProblemKeys(recentProblemKeys, lastProblemKey) {
+  if (Array.isArray(recentProblemKeys) && recentProblemKeys.length > 0) {
+    return recentProblemKeys.filter(Boolean).slice(-ADDITION_RECENT_PROBLEM_LIMIT)
+  }
+  if (lastProblemKey) return [lastProblemKey]
+  return []
+}
+
+function additionIsDuplicateProblem(problem, recentProblemKeys) {
+  if (!recentProblemKeys || recentProblemKeys.length === 0) return false
+  const key = additionFormatProblemKey(problem)
+  return recentProblemKeys.includes(key)
 }
 
 // ─── 검증 ───────────────────────────────────────────────────
@@ -65,9 +75,10 @@ function buildStandardAdditionProblem(a, b) {
   }
 }
 
-function generateStandardAdditionProblem(config, lastProblemKey) {
+function generateStandardAdditionProblem(config, recentProblemKeys) {
   const needsA = Boolean(config.operandA)
   const needsB = Boolean(config.operandB)
+  let fallback = null
 
   for (let attempt = 0; attempt < ADDITION_GENERATION_MAX_ATTEMPTS; attempt += 1) {
     const a = needsA ? additionGenerateOperand(config.operandA) : 0
@@ -81,24 +92,27 @@ function generateStandardAdditionProblem(config, lastProblemKey) {
       operationType: ADDITION_OPERATION_TYPES.STANDARD,
     }
 
-    if (!additionIsDuplicateProblem(problem, lastProblemKey)) {
+    if (!fallback) fallback = problem
+    if (!additionIsDuplicateProblem(problem, recentProblemKeys)) {
       return problem
     }
   }
 
-  // 생성 실패 시 안전한 기본값
-  return {
-    operationType: ADDITION_OPERATION_TYPES.STANDARD,
-    operandA: config.operandA?.min ?? 10,
-    operandB: config.operandB?.min ?? 1,
-    target: null,
-    answer: (config.operandA?.min ?? 10) + (config.operandB?.min ?? 1),
-  }
+  return (
+    fallback || {
+      operationType: ADDITION_OPERATION_TYPES.STANDARD,
+      operandA: config.operandA?.min ?? 10,
+      operandB: config.operandB?.min ?? 1,
+      target: null,
+      answer: (config.operandA?.min ?? 10) + (config.operandB?.min ?? 1),
+    }
+  )
 }
 
-function generateMakeTenComplementProblem(config, lastProblemKey) {
+function generateMakeTenComplementProblem(config, recentProblemKeys) {
   const multipleOf = config.targetMultipleOf ?? 10
   const range = config.operandA
+  let fallback = null
 
   for (let attempt = 0; attempt < ADDITION_GENERATION_MAX_ATTEMPTS; attempt += 1) {
     const a = additionGenerateOperand(range)
@@ -117,21 +131,26 @@ function generateMakeTenComplementProblem(config, lastProblemKey) {
       answer,
     }
 
-    if (!additionIsDuplicateProblem(problem, lastProblemKey)) {
+    if (!fallback) fallback = problem
+    if (!additionIsDuplicateProblem(problem, recentProblemKeys)) {
       return problem
     }
   }
 
-  return {
-    operationType: ADDITION_OPERATION_TYPES.MAKE_TEN_COMPLEMENT,
-    operandA: 18,
-    operandB: null,
-    target: 20,
-    answer: 2,
-  }
+  return (
+    fallback || {
+      operationType: ADDITION_OPERATION_TYPES.MAKE_TEN_COMPLEMENT,
+      operandA: 18,
+      operandB: null,
+      target: 20,
+      answer: 2,
+    }
+  )
 }
 
-function generateMissingAddendProblem(config, lastProblemKey) {
+function generateMissingAddendProblem(config, recentProblemKeys) {
+  let fallback = null
+
   for (let attempt = 0; attempt < ADDITION_GENERATION_MAX_ATTEMPTS; attempt += 1) {
     const a = additionGenerateOperand(config.operandA)
     const b = additionGenerateOperand(config.operandB)
@@ -147,20 +166,23 @@ function generateMissingAddendProblem(config, lastProblemKey) {
       answer: b,
     }
 
-    if (!additionIsDuplicateProblem(problem, lastProblemKey)) {
+    if (!fallback) fallback = problem
+    if (!additionIsDuplicateProblem(problem, recentProblemKeys)) {
       return problem
     }
   }
 
   const fallbackA = config.operandA?.min ?? 34
   const fallbackB = config.operandB?.min ?? 7
-  return {
-    operationType: ADDITION_OPERATION_TYPES.MISSING_ADDEND,
-    operandA: fallbackA,
-    operandB: null,
-    target: fallbackA + fallbackB,
-    answer: fallbackB,
-  }
+  return (
+    fallback || {
+      operationType: ADDITION_OPERATION_TYPES.MISSING_ADDEND,
+      operandA: fallbackA,
+      operandB: null,
+      target: fallbackA + fallbackB,
+      answer: fallbackB,
+    }
+  )
 }
 
 // ─── 공개 API ─────────────────────────────────────────────────
@@ -168,23 +190,25 @@ function generateMissingAddendProblem(config, lastProblemKey) {
 /**
  * 레벨 설정으로 문제 1개 생성
  * @param {object} level — ADDITION_GALAXIES[].levels[] 항목
- * @param {{ lastProblemKey?: string }} options
- * @returns {AdditionProblem}
+ * @param {{ lastProblemKey?: string, recentProblemKeys?: string[] }} options
  */
 function generateAdditionProblem(level, options = {}) {
   const config = level.problemConfig
-  const lastProblemKey = options.lastProblemKey ?? null
+  const recentProblemKeys = normalizeRecentProblemKeys(
+    options.recentProblemKeys,
+    options.lastProblemKey
+  )
   let problem
 
   switch (config.operationType) {
     case ADDITION_OPERATION_TYPES.MAKE_TEN_COMPLEMENT:
-      problem = generateMakeTenComplementProblem(config, lastProblemKey)
+      problem = generateMakeTenComplementProblem(config, recentProblemKeys)
       break
     case ADDITION_OPERATION_TYPES.MISSING_ADDEND:
-      problem = generateMissingAddendProblem(config, lastProblemKey)
+      problem = generateMissingAddendProblem(config, recentProblemKeys)
       break
     default:
-      problem = generateStandardAdditionProblem(config, lastProblemKey)
+      problem = generateStandardAdditionProblem(config, recentProblemKeys)
   }
 
   return {
@@ -220,12 +244,15 @@ function generateAdditionProblemForLevel(galaxyId, stageNumber, options = {}) {
 /** 스테이지 전체 문제 세트 생성 */
 function generateAdditionProblemSet(level, count = ADDITION_PROBLEMS_PER_STAGE) {
   const problems = []
-  let lastProblemKey = null
+  const recentProblemKeys = []
 
   for (let i = 0; i < count; i += 1) {
-    const problem = generateAdditionProblem(level, { lastProblemKey })
+    const problem = generateAdditionProblem(level, { recentProblemKeys })
     problems.push(problem)
-    lastProblemKey = additionFormatProblemKey(problem)
+    recentProblemKeys.push(additionFormatProblemKey(problem))
+    if (recentProblemKeys.length > ADDITION_RECENT_PROBLEM_LIMIT) {
+      recentProblemKeys.shift()
+    }
   }
 
   return problems

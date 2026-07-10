@@ -222,10 +222,13 @@
             <button class="level-map-back" id="additionMapBackButton" type="button">뒤로 가기</button>
             <div class="level-map-header__copy">
               <h2>덧셈 우주 맵</h2>
-              <p>맵을 골라 덧셈을 시작해요</p>
+              <p>행성을 골라 덧셈을 시작해요</p>
             </div>
           </header>
-          <div class="addition-map-groups" id="additionMapGroups"></div>
+
+          <div class="constellation-map addition-constellation-map" id="additionConstellationMap">
+            <svg class="constellation-lines" id="additionConstellationLines" viewBox="0 0 300 520" preserveAspectRatio="none" aria-hidden="true"></svg>
+          </div>
         </section>
       </div>
 
@@ -244,7 +247,7 @@
               <button class="game-hud__exit" id="additionExitButton" type="button">나가기</button>
             </header>
 
-            <div class="combo-bar combo-bar--power" aria-label="덧셈 파워 게이지">
+            <div class="combo-bar combo-bar--power addition-power-bar" aria-label="덧셈 파워 게이지">
               <span class="combo-bar__label">파워</span>
               <div class="combo-bar__track">
                 <div
@@ -259,7 +262,6 @@
               </div>
               <strong class="combo-bar__count" id="additionPowerCount">0 / 200</strong>
             </div>
-            <p class="addition-power-meta" id="additionPowerMeta">콤보 0 · 숙련 Lv1</p>
           </div>
 
           <section class="play-panel play-panel--addition">
@@ -464,6 +466,17 @@
   <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
   <div class="celebration-popup" id="celebrationPopup" aria-live="polite" aria-atomic="true">
     <strong>구구팡에게 힘을 줬어요!</strong>
+  </div>
+
+  <div class="addition-power-max" id="additionPowerMaxFx" aria-live="assertive" aria-atomic="true">
+    <div class="addition-power-max__flash" aria-hidden="true"></div>
+    <div class="addition-power-max__particles" id="additionPowerMaxParticles" aria-hidden="true"></div>
+    <div class="addition-power-max__card">
+      <span class="addition-power-max__buddy" aria-hidden="true">🎉</span>
+      <p class="addition-power-max__kicker">Power MAX</p>
+      <strong class="addition-power-max__title">성공!</strong>
+      <p class="addition-power-max__message" id="additionPowerMaxMessage">다음 단계가 열렸어요!</p>
+    </div>
   </div>
 
   <div class="zone-clear-popup" id="zoneClearPopup" aria-live="polite" aria-atomic="true">

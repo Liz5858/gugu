@@ -635,6 +635,56 @@ button {
   opacity: 1;
 }
 
+.planet--locked {
+  filter: brightness(0.42) grayscale(0.55);
+  opacity: 0.62;
+  cursor: not-allowed;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+}
+
+.planet--locked .planet__buddy {
+  opacity: 0.55;
+  animation: none;
+}
+
+.planet--locked .planet__progress {
+  color: #c9c4d8;
+  background: rgba(30, 28, 48, 0.8);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.planet--current {
+  border-color: rgba(87, 240, 179, 0.75);
+  z-index: 2;
+}
+
+.planet--current .planet__glow {
+  opacity: 0.85;
+  background: radial-gradient(circle, rgba(87, 240, 179, 0.65), transparent 70%);
+}
+
+.addition-planet.planet--current {
+  animation: addition-planet-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes addition-planet-pulse {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(var(--growth-scale));
+    box-shadow:
+      0 10px 24px rgba(0, 0, 0, 0.35),
+      0 0 12px rgba(87, 240, 179, 0.35);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(calc(var(--growth-scale) * 1.08));
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.35),
+      0 0 28px rgba(87, 240, 179, 0.65),
+      0 0 40px rgba(255, 212, 93, 0.25);
+  }
+}
+
 .planet--completed {
   border-color: rgba(255, 212, 93, 0.75);
   background: radial-gradient(circle at 30% 25%, #7bf7cb 0%, #3ecf9a 45%, #2a8f6a 100%);
@@ -642,6 +692,113 @@ button {
     0 0 28px rgba(87, 240, 179, 0.45),
     0 0 36px rgba(255, 212, 93, 0.25),
     0 12px 28px rgba(0, 0, 0, 0.3);
+}
+
+/* 덧셈 완료 행성: 크기 고정, glow/반짝임만 */
+.addition-planet.planet--completed {
+  --growth-scale: 0.8;
+  --power-level: 1;
+  --growth-stage: 0;
+  transform: translate(-50%, -50%) scale(0.8);
+  z-index: 2;
+  animation: addition-planet-complete-glow 2.4s ease-in-out infinite;
+}
+
+.addition-planet.planet--completed::before,
+.addition-planet.planet--completed::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.addition-planet.planet--completed::before {
+  width: 120%;
+  height: 120%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255, 212, 93, 0.55), transparent 68%);
+  animation: addition-planet-aura-pulse 2.4s ease-in-out infinite;
+}
+
+.addition-planet.planet--completed::after {
+  width: 160%;
+  height: 160%;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 212, 93, 0.35);
+  box-shadow:
+    0 0 18px rgba(87, 240, 179, 0.35),
+    inset 0 0 12px rgba(255, 212, 93, 0.15);
+  animation: addition-planet-ring-twinkle 2.8s linear infinite;
+}
+
+.addition-planet.planet--completed .planet__glow {
+  opacity: 1;
+  inset: -14px;
+  background: radial-gradient(circle, rgba(255, 212, 93, 0.7), rgba(87, 240, 179, 0.35), transparent 72%);
+  animation: addition-planet-sparkle 1.8s ease-in-out infinite;
+}
+
+@keyframes addition-planet-complete-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 16px rgba(87, 240, 179, 0.4),
+      0 0 28px rgba(255, 212, 93, 0.25),
+      0 10px 24px rgba(0, 0, 0, 0.3);
+    filter: brightness(1);
+  }
+
+  50% {
+    box-shadow:
+      0 0 28px rgba(87, 240, 179, 0.7),
+      0 0 42px rgba(255, 212, 93, 0.45),
+      0 12px 28px rgba(0, 0, 0, 0.3);
+    filter: brightness(1.12);
+  }
+}
+
+@keyframes addition-planet-aura-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
+@keyframes addition-planet-ring-twinkle {
+  0% {
+    opacity: 0.35;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+
+  50% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) rotate(180deg) scale(1.04);
+  }
+
+  100% {
+    opacity: 0.35;
+    transform: translate(-50%, -50%) rotate(360deg) scale(1);
+  }
+}
+
+@keyframes addition-planet-sparkle {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 .planet--completed .planet__ring {
@@ -2525,70 +2682,52 @@ button {
   gap: 16px;
 }
 
-.addition-map-groups {
-  display: grid;
-  gap: 14px;
+.addition-constellation-map {
+  min-height: 640px;
 }
 
-.addition-map-group {
-  padding: 14px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* 태블릿 가로/세로 미디어쿼리의 grid 변환에서 덧셈 맵은 성좌 좌표 유지 */
+.addition-constellation-map.constellation-map {
+  display: block;
+  position: relative;
+  padding: 0;
 }
 
-.addition-map-group__header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+.addition-constellation-map .addition-planet {
+  position: absolute;
 }
 
-.addition-map-group__header h3 {
-  margin: 0;
-  font-size: 1rem;
+.addition-constellation-map .constellation-lines {
+  display: block;
 }
 
-.addition-map-group__header p {
-  margin: 2px 0 0;
-  font-size: 0.78rem;
-  color: var(--text-muted);
+.addition-planet {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  padding: 0;
+  transition:
+    box-shadow 0.45s ease-out,
+    border-color 0.45s ease-out,
+    filter 0.45s ease-out;
 }
 
-.addition-map-group__icon {
-  font-size: 1.6rem;
+.addition-planet .planet__label {
+  font-size: 0.68rem;
 }
 
-.addition-map-group__levels {
-  display: grid;
-  gap: 8px;
+.addition-planet.planet--locked:active {
+  transform: translate(-50%, -50%) scale(var(--growth-scale));
 }
 
-.addition-map-level {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 10px;
-  align-items: center;
-  padding: 10px 12px;
-  border-radius: 14px;
-  text-align: left;
-  color: var(--text);
-  background: rgba(17, 53, 37, 0.35);
-  border: 1px solid rgba(87, 240, 179, 0.2);
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.addition-map-level strong {
-  font-family: "Baloo 2", "Pretendard", sans-serif;
-  font-size: 0.95rem;
-  color: var(--mint);
-}
-
-.addition-map-level span {
-  grid-column: 2;
-  font-size: 0.82rem;
-  color: var(--text-muted);
+@media (prefers-reduced-motion: reduce) {
+  .addition-planet.planet--current,
+  .addition-planet.planet--completed,
+  .addition-planet.planet--completed::before,
+  .addition-planet.planet--completed::after,
+  .addition-planet.planet--completed .planet__glow {
+    animation: none;
+  }
 }
 
 /* ─── 덧셈 게임 화면 ───────────────────────────────────────── */
@@ -2626,11 +2765,26 @@ button {
   color: var(--yellow);
 }
 
+.addition-term--unknown.addition-term--filled {
+  color: var(--yellow);
+  background: rgba(255, 212, 93, 0.18);
+  box-shadow: 0 0 0 1px rgba(255, 212, 93, 0.35);
+}
+
 .addition-layout-toggle {
-  display: flex;
+  display: none;
   gap: 8px;
   justify-content: center;
   margin-top: 4px;
+}
+
+.addition-layout-toggle.is-visible,
+.addition-layout-toggle:not([hidden]) {
+  display: flex;
+}
+
+.addition-layout-toggle[hidden] {
+  display: none !important;
 }
 
 .addition-layout-toggle__btn {
@@ -2960,10 +3114,32 @@ button {
   line-height: 1.1;
   margin: 0 auto;
   width: fit-content;
+  /* + 기호가 숫자 열 왼쪽으로 살짝 나가도록 */
+  padding-left: 0.85em;
 }
 
-.addition-vertical__row--op {
+.addition-vertical__row--addend {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  justify-items: end;
+  column-gap: 0.2em;
+  width: 100%;
+}
+
+.addition-vertical__op {
+  justify-self: start;
+  margin-left: -0.85em;
   color: var(--mint);
+}
+
+.addition-vertical__num {
+  font-variant-numeric: tabular-nums;
+}
+
+.addition-vertical__row--a,
+.addition-vertical__row--answer {
+  font-variant-numeric: tabular-nums;
 }
 
 .addition-vertical__line {
@@ -2979,8 +3155,33 @@ button {
   color: var(--yellow);
 }
 
-#addition-game-screen .combo-bar--power {
-  margin-top: 8px;
+#addition-game-screen .combo-bar--power.addition-power-bar {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(87, 240, 179, 0.08);
+  border: 1px solid rgba(87, 240, 179, 0.22);
+  gap: 10px;
+}
+
+#addition-game-screen .addition-power-bar .combo-bar__label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--mint);
+  min-width: 2.4em;
+}
+
+#addition-game-screen .addition-power-bar .combo-bar__track {
+  height: 14px;
+}
+
+#addition-game-screen .addition-power-bar .combo-bar__count {
+  font-family: "Baloo 2", "Pretendard", sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--yellow);
+  min-width: 4.8em;
+  text-align: right;
 }
 
 #addition-game-screen .combo-bar__fill {
@@ -2991,10 +3192,165 @@ button {
   transition: left 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.addition-power-meta {
-  margin: 6px 0 0;
+/* ─── 덧셈 파워 MAX 축하 이펙트 ─────────────────────────────── */
+
+.addition-power-max {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.addition-power-max.is-show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.addition-power-max__flash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255, 212, 93, 0.55), transparent 42%),
+    radial-gradient(circle at 50% 50%, rgba(87, 240, 179, 0.35), transparent 55%),
+    rgba(8, 6, 18, 0.55);
+  animation: addition-power-flash 2.4s ease both;
+}
+
+.addition-power-max__particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.addition-power-max__spark {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: var(--spark-size, 8px);
+  height: var(--spark-size, 8px);
+  border-radius: 50%;
+  background: var(--spark-color, #ffd45d);
+  box-shadow: 0 0 12px var(--spark-color, #ffd45d);
+  opacity: 0;
+  animation: addition-power-spark 1.4s ease-out both;
+  animation-delay: var(--spark-delay, 0s);
+}
+
+.addition-power-max__card {
+  position: relative;
+  z-index: 1;
+  min-width: min(86vw, 300px);
+  padding: 28px 24px 24px;
   text-align: center;
-  font-size: 0.78rem;
+  border-radius: 28px;
+  color: #12281d;
+  background: linear-gradient(180deg, #fff4b8 0%, #ffd45d 45%, #57f0b3 100%);
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.35),
+    0 24px 60px rgba(0, 0, 0, 0.45);
+  transform: scale(0.72);
+  opacity: 0;
+  animation: addition-power-card-pop 0.7s cubic-bezier(0.34, 1.45, 0.64, 1) 0.08s both;
+}
+
+.addition-power-max__buddy {
+  display: block;
+  font-size: 2.8rem;
+  line-height: 1;
+  margin-bottom: 6px;
+  animation: addition-power-buddy-bounce 0.9s ease 0.2s both;
+}
+
+.addition-power-max__kicker {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(18, 40, 29, 0.7);
+}
+
+.addition-power-max__title {
+  display: block;
+  margin-top: 4px;
+  font-family: "Baloo 2", "Pretendard", sans-serif;
+  font-size: clamp(2.4rem, 10vw, 3.2rem);
+  line-height: 1;
+  color: #113525;
+  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.45);
+}
+
+.addition-power-max__message {
+  margin: 10px 0 0;
+  font-size: 1rem;
   font-weight: 700;
-  color: var(--text-muted);
+  color: rgba(17, 53, 37, 0.9);
+}
+
+@keyframes addition-power-flash {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  35% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+
+@keyframes addition-power-spark {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  20% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(0.2);
+  }
+}
+
+@keyframes addition-power-card-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.72) translateY(18px);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.06) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes addition-power-buddy-bounce {
+  0% {
+    transform: scale(0.5) rotate(-12deg);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.2) rotate(8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .addition-power-max__flash,
+  .addition-power-max__spark,
+  .addition-power-max__card,
+  .addition-power-max__buddy {
+    animation: none !important;
+  }
+
+  .addition-power-max.is-show .addition-power-max__card {
+    opacity: 1;
+    transform: none;
+  }
 }

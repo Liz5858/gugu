@@ -374,12 +374,81 @@ function getAllAdditionMapNodes() {
   )
 }
 
+function getAdditionProgressStorageKey(levelId) {
+  return `addition_progress_${levelId}_${getCurrentPlayerName()}`
+}
+
+function getDefaultAdditionLevelProgress() {
+  return { currentPower: 0, isCompleted: false }
+}
+
+function loadAdditionLevelProgress(levelId) {
+  const raw = localStorage.getItem(getAdditionProgressStorageKey(levelId))
+  if (!raw) return getDefaultAdditionLevelProgress()
+  try {
+    const parsed = JSON.parse(raw)
+    const currentPower = Math.max(0, Math.min(200, Number(parsed.currentPower) || 0))
+    // 이전 숙련도(powerLevel) 저장값 호환: Lv5 이상이면 완료로 간주
+    const legacyCompleted = Number(parsed.powerLevel) >= 5
+    return {
+      currentPower,
+      isCompleted: Boolean(parsed.isCompleted) || legacyCompleted || currentPower >= 200,
+    }
+  } catch {
+    return getDefaultAdditionLevelProgress()
+  }
+}
+
+function saveAdditionLevelProgress(levelId, progress) {
+  localStorage.setItem(getAdditionProgressStorageKey(levelId), JSON.stringify(progress))
+}
+
+/**
+ * 행성 상태: locked | current | completed
+ * - 은하 내에서 이전 스테이지를 완료해야 다음이 열림
+ * - 각 은하의 Lv1은 항상 해금
+ */
+function getAdditionPlanetStatus(galaxyId, stageNumber) {
+  const found = getAdditionLevel(galaxyId, stageNumber)
+  if (!found) return "locked"
+
+  const progress = loadAdditionLevelProgress(found.level.id)
+  if (progress.isCompleted) return "completed"
+
+  if (stageNumber === 1) return "current"
+
+  const previous = getAdditionLevel(galaxyId, stageNumber - 1)
+  if (!previous) return "locked"
+
+  const prevProgress = loadAdditionLevelProgress(previous.level.id)
+  if (prevProgress.isCompleted) return "current"
+
+  return "locked"
+}
+
+function getAdditionLevelUnlockState(levelId) {
+  const found = getAdditionLevelById(levelId)
+  if (!found) return { status: "locked", isLocked: true, isCurrent: false, isCompleted: false }
+
+  const status = getAdditionPlanetStatus(found.galaxy.id, found.level.stageNumber)
+  return {
+    status,
+    isLocked: status === "locked",
+    isCurrent: status === "current",
+    isCompleted: status === "completed",
+    progress: loadAdditionLevelProgress(levelId),
+  }
+}
+
 function levelSupportsStrategy(level, strategyId) {
   return level.uiConfig.strategies.includes(strategyId)
 }
 
 function levelSupportsLayoutToggle(level) {
-  return Boolean(level.uiConfig.supportsLayoutToggle)
+  // 은하계(galaxy-cluster)에서만 가로/세로셈 전환 허용
+  if (!level?.uiConfig?.supportsLayoutToggle) return false
+  const found = getAdditionLevelById(level.id)
+  return found?.galaxy?.id === "galaxy-cluster"
 }
 
 function getAdditionStrategyMeta(strategyId) {
@@ -394,15 +463,37 @@ function isInverseAdditionLevel(level) {
   )
 }
 
-/** 받아올림 여부 판별 — 문제 생성(2단계)에서 사용 */
+/** 자릿수별 받아올림 정보 */
+function getAdditionCarryFlags(a, b) {
+  let carry = 0
+  let hasOnesCarry = false
+  let hasTensCarry = false
+  let hasHundredsCarry = false
+  let place = 0
+  let x = Math.abs(Number(a) || 0)
+  let y = Math.abs(Number(b) || 0)
+
+  while (x > 0 || y > 0 || carry > 0) {
+    const digitSum = (x % 10) + (y % 10) + carry
+    const nextCarry = digitSum >= 10 ? 1 : 0
+    if (nextCarry) {
+      if (place === 0) hasOnesCarry = true
+      else if (place === 1) hasTensCarry = true
+      else hasHundredsCarry = true
+    }
+    carry = nextCarry
+    x = Math.floor(x / 10)
+    y = Math.floor(y / 10)
+    place += 1
+    if (place > 6) break
+  }
+
+  return { hasOnesCarry, hasTensCarry, hasHundredsCarry }
+}
+
+/** 받아올림 여부 판별 — 문제 생성에서 사용 */
 function additionOperandsMatchCarryRule(a, b, carryRule) {
-  const onesSum = (a % 10) + (b % 10)
-  const hasOnesCarry = onesSum >= 10
-  const tensSum = Math.floor(a / 10) + Math.floor(b / 10) + (hasOnesCarry ? 1 : 0)
-  const hasTensCarry = tensSum >= 10
-  const hundredsSum =
-    Math.floor(a / 100) + Math.floor(b / 100) + (hasTensCarry ? 1 : 0)
-  const hasHundredsCarry = hundredsSum >= 10
+  const { hasOnesCarry, hasTensCarry, hasHundredsCarry } = getAdditionCarryFlags(a, b)
 
   if (carryRule === ADDITION_CARRY_RULES.NONE) {
     return !hasOnesCarry && !hasTensCarry && !hasHundredsCarry
