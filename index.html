@@ -80,10 +80,10 @@
           <article class="mode-card mode-add">
             <div class="mode-symbol">+</div>
             <div class="mode-body">
-              <h3>덧셈 <span>준비 중</span></h3>
-              <p>아직 열리지 않은 학습 모드예요.</p>
+              <h3>덧셈 <span>우주 맵</span></h3>
+              <p>달 · 우주정거장 · 은하계를 탐험해요.</p>
               <div class="mode-actions">
-                <button class="soft-button mode-select-button" type="button" data-mode="덧셈" data-available="false">선택하기</button>
+                <button class="play-button mode-select-button" type="button" data-mode="덧셈" data-available="true">PLAY</button>
               </div>
             </div>
           </article>
@@ -211,6 +211,90 @@
               <strong class="planet__number">9</strong>
               <button class="planet__satellite" type="button" data-level="9" aria-label="2배 존 9단">2×</button>
             </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="screen" id="addition-map-screen">
+        <section class="level-map-layout addition-map-layout" aria-label="덧셈 우주 맵">
+          <header class="level-map-header">
+            <button class="level-map-back" id="additionMapBackButton" type="button">뒤로 가기</button>
+            <div class="level-map-header__copy">
+              <h2>덧셈 우주 맵</h2>
+              <p>맵을 골라 덧셈을 시작해요</p>
+            </div>
+          </header>
+          <div class="addition-map-groups" id="additionMapGroups"></div>
+        </section>
+      </div>
+
+      <div class="screen" id="addition-game-screen">
+        <section class="game-layout game-layout--addition" aria-label="덧셈 게임 화면">
+          <div class="game-status">
+            <header class="game-hud">
+              <div class="game-hud__badge game-hud__badge--bolt">
+                <span aria-hidden="true">⚡</span>
+                <strong id="additionBoltCount">0</strong>
+              </div>
+              <div class="game-hud__center">
+                <p class="game-hud__mode" id="additionModeLabel">달 · Lv1</p>
+                <p class="game-hud__player" id="additionPlayerName">댕댕</p>
+              </div>
+              <button class="game-hud__exit" id="additionExitButton" type="button">나가기</button>
+            </header>
+          </div>
+
+          <section class="play-panel play-panel--addition">
+            <p class="play-panel__hint" id="additionHint">전략 버튼을 눌러 수식을 바꿔 봐요!</p>
+
+            <div class="play-equation addition-main-equation" id="additionMainEquation" aria-label="현재 문제"></div>
+
+            <div class="addition-layout-toggle" id="additionLayoutToggle" hidden>
+              <button class="addition-layout-toggle__btn is-active" type="button" data-layout="horizontal">가로셈</button>
+              <button class="addition-layout-toggle__btn" type="button" data-layout="vertical">세로셈</button>
+            </div>
+
+            <div class="addition-strategy" id="additionStrategyArea">
+              <div class="addition-strategy__buttons" id="additionStrategyButtons">
+                <button
+                  class="addition-strategy-btn"
+                  id="additionStrategySlide"
+                  type="button"
+                  data-strategy="slide"
+                >
+                  스르륵 분리!
+                </button>
+                <button
+                  class="addition-strategy-btn"
+                  id="additionStrategyMake10"
+                  type="button"
+                  data-strategy="make10"
+                >
+                  10만들기 마법!
+                </button>
+              </div>
+              <div
+                class="addition-strategy__equation"
+                id="additionStrategyEquation"
+                aria-live="polite"
+                hidden
+              ></div>
+            </div>
+          </section>
+
+          <div class="keypad" id="additionKeypad" aria-label="덧셈 숫자 패드">
+            <button class="keypad-button" type="button" data-key="1">1</button>
+            <button class="keypad-button" type="button" data-key="2">2</button>
+            <button class="keypad-button" type="button" data-key="3">3</button>
+            <button class="keypad-button" type="button" data-key="4">4</button>
+            <button class="keypad-button" type="button" data-key="5">5</button>
+            <button class="keypad-button" type="button" data-key="6">6</button>
+            <button class="keypad-button" type="button" data-key="7">7</button>
+            <button class="keypad-button" type="button" data-key="8">8</button>
+            <button class="keypad-button" type="button" data-key="9">9</button>
+            <button class="keypad-button keypad-button--danger" type="button" data-action="clear">⌫</button>
+            <button class="keypad-button" type="button" data-key="0">0</button>
+            <button class="keypad-button keypad-button--confirm" type="button" data-action="submit">확인</button>
           </div>
         </section>
       </div>
@@ -387,6 +471,9 @@
     </div>
   </div>
 
+  <script src="./addition-levels.js"></script>
+  <script src="./addition-problems.js"></script>
+  <script src="./addition-game.js"></script>
   <script src="./utils.js"></script>
   <script src="./main.js"></script>
   <script src="./pwa.js"></script>

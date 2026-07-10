@@ -13,6 +13,8 @@ const phoneFrame = document.querySelector(".phone-frame")
 const homeScreen = document.getElementById("home-screen")
 const mainScreen = document.getElementById("main-screen")
 const levelMapScreen = document.getElementById("level-map-screen")
+const additionMapScreen = document.getElementById("addition-map-screen")
+const additionGameScreen = document.getElementById("addition-game-screen")
 const gameScreen = document.getElementById("game-screen")
 const zoneScreen = document.getElementById("zone-screen")
 const currentUserName = document.getElementById("currentUserName")
@@ -90,13 +92,19 @@ modeSelectButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const mode = button.dataset.mode
     const isAvailable = button.dataset.available === "true"
-    if (isAvailable) {
-      renderLevelMap()
-      showScreen("levelmap")
-      showToast("우주 맵에서 단을 선택해요!")
+    if (!isAvailable) {
+      showToast(`${mode}은(는) 준비 중이에요.`)
       return
     }
-    showToast(`${mode}은(는) 준비 중이에요.`)
+    if (mode === "덧셈") {
+      renderAdditionMap()
+      showScreen("additionmap")
+      showToast("덧셈 우주 맵에서 레벨을 선택해요!")
+      return
+    }
+    renderLevelMap()
+    showScreen("levelmap")
+    showToast("우주 맵에서 단을 선택해요!")
   })
 })
 
@@ -175,4 +183,5 @@ bindKeypad(zoneKeypad, {
 
 loadCurrentUser()
 renderLevelMap()
+initAdditionGame()
 showScreen("home")

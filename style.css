@@ -754,7 +754,9 @@ button {
 }
 
 #game-screen,
-#zone-screen {
+#zone-screen,
+#addition-game-screen,
+#addition-map-screen {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
@@ -2460,4 +2462,293 @@ button {
     box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
+}
+
+/* ─── 덧셈 우주 맵 ─────────────────────────────────────────── */
+
+#addition-game-screen .game-layout--addition {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  height: 100%;
+  min-height: 0;
+  gap: 15px;
+  overflow: hidden;
+}
+
+#addition-game-screen .game-status,
+#addition-game-screen .play-panel,
+#addition-game-screen .keypad {
+  position: static;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+}
+
+#addition-game-screen .keypad-button {
+  min-height: 52px;
+}
+
+.addition-map-layout {
+  gap: 16px;
+}
+
+.addition-map-groups {
+  display: grid;
+  gap: 14px;
+}
+
+.addition-map-group {
+  padding: 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.addition-map-group__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.addition-map-group__header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.addition-map-group__header p {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.addition-map-group__icon {
+  font-size: 1.6rem;
+}
+
+.addition-map-group__levels {
+  display: grid;
+  gap: 8px;
+}
+
+.addition-map-level {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 14px;
+  text-align: left;
+  color: var(--text);
+  background: rgba(17, 53, 37, 0.35);
+  border: 1px solid rgba(87, 240, 179, 0.2);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.addition-map-level strong {
+  font-family: "Baloo 2", "Pretendard", sans-serif;
+  font-size: 0.95rem;
+  color: var(--mint);
+}
+
+.addition-map-level span {
+  grid-column: 2;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ─── 덧셈 게임 화면 ───────────────────────────────────────── */
+
+#addition-game-screen {
+  display: none;
+}
+
+#addition-game-screen .play-panel--addition {
+  gap: 10px;
+}
+
+.addition-main-equation {
+  min-height: 3.2rem;
+}
+
+.addition-term {
+  color: var(--text);
+}
+
+.addition-term--unknown,
+.addition-term--target {
+  color: var(--yellow);
+}
+
+.addition-layout-toggle {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.addition-layout-toggle__btn {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.addition-layout-toggle__btn.is-active {
+  color: #113525;
+  background: linear-gradient(180deg, #9af5d0 0%, var(--mint) 100%);
+  border-color: transparent;
+}
+
+.addition-strategy {
+  margin-top: 6px;
+}
+
+.addition-strategy__buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.addition-strategy-btn {
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #113525;
+  background: linear-gradient(180deg, #fff4b8 0%, var(--yellow) 100%);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 16px rgba(255, 212, 93, 0.2);
+  touch-action: manipulation;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.addition-strategy-btn.is-active {
+  border-color: rgba(87, 240, 179, 0.85);
+  box-shadow: 0 0 0 2px rgba(87, 240, 179, 0.35), 0 8px 18px rgba(87, 240, 179, 0.25);
+  transform: translateY(-1px);
+}
+
+.addition-strategy-btn:active {
+  transform: scale(0.97);
+}
+
+.addition-strategy__equation {
+  margin-top: 12px;
+  padding: 12px 10px;
+  border-radius: 16px;
+  text-align: center;
+  font-family: "Baloo 2", "Pretendard", sans-serif;
+  font-size: clamp(1.2rem, 5.5vw, 1.65rem);
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--text);
+  background: rgba(87, 240, 179, 0.08);
+  border: 1px dashed rgba(87, 240, 179, 0.35);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.addition-strategy__equation--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.addition-strategy-expr {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.addition-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.addition-part {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 8px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.addition-strategy__equation--slide .addition-part--split {
+  background: rgba(120, 180, 255, 0.22);
+  animation: addition-part-pop 0.45s ease both;
+  animation-delay: calc(var(--part-index) * 0.08s);
+}
+
+.addition-strategy__equation--make10 .addition-part--ten {
+  background: rgba(255, 212, 93, 0.28);
+  animation: addition-part-pop 0.45s ease both;
+  animation-delay: 0s;
+}
+
+.addition-strategy__equation--make10 .addition-part--rest {
+  background: rgba(87, 240, 179, 0.22);
+  animation: addition-part-pop 0.45s ease both;
+  animation-delay: 0.1s;
+}
+
+@keyframes addition-part-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.85);
+  }
+
+  70% {
+    transform: translateY(-2px) scale(1.04);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.addition-vertical {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  font-family: "Baloo 2", "Pretendard", sans-serif;
+  font-size: clamp(1.8rem, 8vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  margin: 0 auto;
+  width: fit-content;
+}
+
+.addition-vertical__row--op {
+  color: var(--mint);
+}
+
+.addition-vertical__line {
+  width: 100%;
+  min-width: 88px;
+  height: 3px;
+  margin: 4px 0;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+}
+
+.addition-vertical__row--answer {
+  color: var(--yellow);
+}
+
+#addition-game-screen .keypad {
+  margin-top: auto;
 }

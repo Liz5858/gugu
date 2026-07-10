@@ -565,13 +565,23 @@ function startLevel(dan) {
 }
 
 function showScreen(screenName) {
-  const screenMap = { home: homeScreen, main: mainScreen, levelmap: levelMapScreen, game: gameScreen, zone: zoneScreen }
+  const screenMap = {
+    home: homeScreen,
+    main: mainScreen,
+    levelmap: levelMapScreen,
+    additionmap: typeof additionMapScreen !== "undefined" ? additionMapScreen : null,
+    additiongame: typeof additionGameScreen !== "undefined" ? additionGameScreen : null,
+    game: gameScreen,
+    zone: zoneScreen,
+  }
   Object.entries(screenMap).forEach(([name, element]) => {
+    if (!element) return
     const isVisible = name === screenName
     element.style.display = isVisible ? "flex" : "none"
     element.classList.toggle("is-visible", isVisible)
   })
-  const inGameContext = screenName === "game" || screenName === "zone"
+  const inGameContext =
+    screenName === "game" || screenName === "zone" || screenName === "additiongame"
   phoneFrame.classList.toggle("phone-frame--game", inGameContext)
 }
 
