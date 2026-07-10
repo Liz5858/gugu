@@ -1,12 +1,15 @@
-const CACHE_NAME = "gugumon-v2"
+const CACHE_NAME = "gugumon-v3"
 const PRECACHE_URLS = [
-  "/",
-  "index.html",
-  "style.css",
-  "utils.js",
-  "main.js",
-  "pwa.js",
-  "manifest.json"
+  "./",
+  "./index.html",
+  "./style.css",
+  "./utils.js",
+  "./main.js",
+  "./addition-levels.js",
+  "./addition-problems.js",
+  "./addition-game.js",
+  "./pwa.js",
+  "./manifest.json"
 ]
 
 self.addEventListener("install", (event) => {
