@@ -242,6 +242,23 @@
               </div>
               <button class="game-hud__exit" id="additionExitButton" type="button">나가기</button>
             </header>
+
+            <div class="combo-bar combo-bar--power" aria-label="덧셈 파워 게이지">
+              <span class="combo-bar__label">파워</span>
+              <div class="combo-bar__track">
+                <div
+                  class="combo-bar__fill"
+                  id="addition-power-bar"
+                  role="progressbar"
+                  aria-valuemin="0"
+                  aria-valuemax="200"
+                  aria-valuenow="0"
+                ></div>
+                <span class="combo-bar__egg" aria-hidden="true">⚡</span>
+              </div>
+              <strong class="combo-bar__count" id="additionPowerCount">0 / 200</strong>
+            </div>
+            <p class="addition-power-meta" id="additionPowerMeta">콤보 0 · 숙련 Lv1</p>
           </div>
 
           <section class="play-panel play-panel--addition">
