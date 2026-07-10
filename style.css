@@ -2245,6 +2245,20 @@ button {
   .phone-frame--game {
     padding: calc(10px + var(--safe-t)) calc(16px + var(--safe-r)) calc(10px + var(--safe-b)) calc(16px + var(--safe-l));
   }
+
+  /* 아이패드 가로: 남는 높이를 위아래로 균등 분배해 게임 UI를 수직 중앙 배치 */
+  #addition-game-screen .game-layout--addition,
+  #game-screen .game-layout--play,
+  #zone-screen .game-layout {
+    justify-content: center;
+    gap: clamp(12px, 2.5vh, 24px);
+  }
+
+  #addition-game-screen .keypad,
+  #game-screen .keypad,
+  #zone-screen .keypad {
+    margin-top: 0;
+  }
 }
 
 @media (min-width: 481px) and (max-width: 767px) and (orientation: landscape) {
@@ -2369,7 +2383,23 @@ button {
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.06);
     gap: 10px;
-    padding: calc(16px + var(--safe-t)) calc(20px + var(--safe-r)) calc(14px + var(--safe-b)) calc(20px + var(--safe-l));
+    padding: calc(16px + var(--safe-t)) calc(20px + var(--safe-r)) calc(14px + var(--safe-b)) calc(16px + var(--safe-l));
+  }
+
+  .phone-frame--game {
+    max-width: min(560px, 100%);
+    justify-content: center;
+  }
+
+  .phone-frame--game > .screen.is-visible {
+    justify-content: center;
+  }
+
+  #addition-game-screen .game-layout--addition,
+  #game-screen .game-layout--play,
+  #zone-screen .game-layout {
+    justify-content: center;
+    max-height: 100%;
   }
 
   .hero-card:not(.hero-card--compact) {
