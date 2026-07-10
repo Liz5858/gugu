@@ -472,9 +472,10 @@ button {
   left: var(--planet-x);
   top: var(--planet-y);
   --growth-stage: 0;
-  --growth-scale: calc(0.82 + var(--growth-stage) * 0.022);
-  --growth-brightness: calc(0.88 + var(--growth-stage) * 0.018);
-  --growth-glow-alpha: calc(var(--growth-stage) * 0.05);
+  --power-level: 1;
+  --growth-scale: calc(0.8 + var(--growth-stage) * 0.012 + (var(--power-level) - 1) * 0.06);
+  --growth-brightness: calc(0.85 + var(--growth-stage) * 0.01 + (var(--power-level) - 1) * 0.05);
+  --growth-glow-alpha: calc(var(--growth-stage) * 0.03 + (var(--power-level) - 1) * 0.12);
   transform: translate(-50%, -50%) scale(var(--growth-scale));
   width: 72px;
   height: 72px;
@@ -538,10 +539,11 @@ button {
   top: -18px;
   right: -10px;
   font-size: 1.4rem;
-  opacity: 0;
+  opacity: 1;
   transform: translateY(6px);
   animation: planet-float 2.4s ease-in-out infinite;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+  transition: font-size 0.45s ease;
 }
 
 .planet__label {
@@ -589,9 +591,44 @@ button {
   50% { box-shadow: 0 0 20px rgba(87, 240, 179, 0.7); }
 }
 
+.planet--power-lv1 {
+  background: radial-gradient(circle at 30% 25%, #6a6f9a 0%, #3a3a68 55%, #24244a 100%);
+}
+
+.planet--power-lv2 {
+  background: radial-gradient(circle at 30% 25%, #5f8fd0 0%, #2f5a8f 55%, #1f3a5d 100%);
+  border-color: rgba(120, 180, 240, 0.4);
+}
+
+.planet--power-lv3 {
+  background: radial-gradient(circle at 30% 25%, #57e0b3 0%, #2f9a7a 55%, #1f6a54 100%);
+  border-color: rgba(87, 240, 179, 0.5);
+}
+
+.planet--power-lv4 {
+  background: radial-gradient(circle at 30% 25%, #f7c86b 0%, #cf9a3e 55%, #8f6a2a 100%);
+  border-color: rgba(255, 212, 93, 0.55);
+}
+
+.planet--power-lv5 {
+  background: radial-gradient(circle at 30% 25%, #ff8fb3 0%, #d04f7a 55%, #8f2a54 100%);
+  border-color: rgba(255, 160, 200, 0.7);
+}
+
+.planet--power-lv3 .planet__buddy {
+  font-size: 1.55rem;
+}
+
+.planet--power-lv4 .planet__buddy {
+  font-size: 1.7rem;
+}
+
+.planet--power-lv5 .planet__buddy {
+  font-size: 1.9rem;
+}
+
 .planet--cleared {
   border-color: rgba(87, 240, 179, 0.45);
-  background: radial-gradient(circle at 30% 25%, #6a5f9a 0%, #3a3268 55%, #2a234a 100%);
 }
 
 .planet--cleared .planet__buddy {
@@ -967,6 +1004,14 @@ button {
 .game-hud__center {
   text-align: center;
   min-width: 0;
+}
+
+.game-hud__level {
+  margin: 0 0 2px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--mint);
+  letter-spacing: 0.02em;
 }
 
 .game-hud__mode {

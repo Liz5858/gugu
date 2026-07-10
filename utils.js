@@ -10,6 +10,11 @@ const SPEED_BONUS_MID_MS = 4000
 const LEVEL_UP_AVG_TIME_MS = 3000
 const LEVEL_UP_MIN_MASTERY = 150
 const ZONE_PAIR_BOLT_REWARD = 15
+const MAX_DIFFICULTY_LEVEL = 5
+const POWER_MAX = 100
+const POWER_PER_CORRECT = 10
+const WRONG_POWER_MULTIPLIER = 0.7
+const POWER_LEVEL_BUDDIES = ["🥚", "🐣", "🐥", "🐦", "🦅"]
 
 function getZoneClearBoltBonus(zoneDan) {
   return (zoneDan - 1) * 10
@@ -76,6 +81,7 @@ const playState = {
   questionsAnswered: 0,
   questionStartTime: 0,
   stageCombo: 0,
+  difficultyLevel: 1,
   sessionResults: [],
 }
 
@@ -375,6 +381,21 @@ function saveGugudanProgress(dan, progress) {
   localStorage.setItem(getGugudanStorageKey(dan), JSON.stringify(progress))
 }
 
+function getDifficultyStorageKey(dan) {
+  return `gugudan_difficulty_${dan}_${getCurrentPlayerName()}`
+}
+
+function loadDifficultyLevel(dan) {
+  const raw = localStorage.getItem(getDifficultyStorageKey(dan))
+  const level = Number(raw) || 1
+  return Math.min(Math.max(level, 1), MAX_DIFFICULTY_LEVEL)
+}
+
+function saveDifficultyLevel(dan, level) {
+  const clamped = Math.min(Math.max(level, 1), MAX_DIFFICULTY_LEVEL)
+  localStorage.setItem(getDifficultyStorageKey(dan), String(clamped))
+}
+
 function getGrowthStage(progress) {
   if (progress.isCompleted) return SUB_LEVELS_PER_DAN
   return Math.max(0, progress.currentLevel - 1)
@@ -423,18 +444,26 @@ function saveClearedLevel(level) {
 
 function applyPlanetGrowth(planet, progress) {
   const growthStage = getGrowthStage(progress)
+  const dan = Number(planet.dataset.level)
+  const powerLevel = loadDifficultyLevel(dan)
+
   planet.style.setProperty("--growth-stage", growthStage)
+  planet.style.setProperty("--power-level", powerLevel)
   planet.classList.toggle("planet--completed", progress.isCompleted)
   planet.classList.toggle("planet--cleared", growthStage > 0)
 
+  for (let lv = 1; lv <= MAX_DIFFICULTY_LEVEL; lv += 1) {
+    planet.classList.toggle(`planet--power-lv${lv}`, powerLevel === lv)
+  }
+
   const progressEl = planet.querySelector(".planet__progress")
   if (progressEl) {
-    progressEl.textContent = progress.isCompleted ? "완료" : `${growthStage}/${SUB_LEVELS_PER_DAN}`
+    progressEl.textContent = progress.isCompleted ? "완료" : `Lv${powerLevel}`
   }
 
   const buddy = planet.querySelector(".planet__buddy")
   if (buddy) {
-    buddy.textContent = progress.isCompleted ? "🪐" : growthStage > 0 ? "🐣" : "🌱"
+    buddy.textContent = progress.isCompleted ? "🪐" : POWER_LEVEL_BUDDIES[powerLevel - 1]
   }
 }
 
@@ -554,7 +583,7 @@ function updateComboBar(comboFillEl, comboCountEl, combo) {
 }
 
 function getRequiredExp() {
-  return 100 + ((playState.multiplier - 2) * 10)
+  return POWER_MAX
 }
 
 function updatePowerBar(fillEl, countEl, currentExp) {
@@ -592,31 +621,69 @@ function updatePowerBar(fillEl, countEl, currentExp) {
   if (marker) marker.style.left = `${percent}%`
 }
 
+function isMaxDifficulty() {
+  return playState.difficultyLevel >= MAX_DIFFICULTY_LEVEL
+}
+
 function checkExpLevelUp() {
-  const requiredExp = getRequiredExp()
-  if (currentPower >= requiredExp) {
-    currentPower -= requiredExp
+  if (isMaxDifficulty()) return
+  if (currentPower >= getRequiredExp()) {
     handleExpLevelUp()
   }
 }
 
+function updateCurrentLevelDisplay() {
+  const levelDisplay = document.getElementById("current-level-display")
+  if (levelDisplay) {
+    levelDisplay.textContent = `Lv${playState.difficultyLevel}`
+  }
+}
+
 function handleExpLevelUp() {
+  playState.difficultyLevel = Math.min(playState.difficultyLevel + 1, MAX_DIFFICULTY_LEVEL)
+  saveDifficultyLevel(playState.multiplier, playState.difficultyLevel)
+
+  currentPower = isMaxDifficulty() ? POWER_MAX : 0
+
+  updateCurrentLevelDisplay()
+  updateLevelDisplay()
   showCelebration()
-  showToast("숙련도 레벨업! 대단해요!")
+
+  if (isMaxDifficulty()) {
+    showToast(`최고 난이도 Lv${MAX_DIFFICULTY_LEVEL} 달성! 최고예요!`)
+  } else {
+    showToast(`난이도 Lv${playState.difficultyLevel}로 상승! 대단해요!`)
+  }
 }
 
 function updatePowerGauge(amount) {
+  if (isMaxDifficulty()) {
+    currentPower = POWER_MAX
+    updatePowerBar(powerBar || document.getElementById("power-bar"), playComboCount, currentPower)
+    return
+  }
+
   currentPower += amount
   if (currentPower < 0) currentPower = 0
+  if (currentPower > POWER_MAX) currentPower = POWER_MAX
 
   checkExpLevelUp()
 
   updatePowerBar(powerBar || document.getElementById("power-bar"), playComboCount, currentPower)
 }
 
+function applyWrongPowerPenalty() {
+  if (isMaxDifficulty()) {
+    currentPower = POWER_MAX
+  } else {
+    currentPower = Math.round(currentPower * WRONG_POWER_MULTIPLIER)
+  }
+  updatePowerBar(powerBar || document.getElementById("power-bar"), playComboCount, currentPower)
+}
+
 function resetPowerGauge() {
-  currentPower = 0
-  updatePowerBar(powerBar || document.getElementById("power-bar"), playComboCount, 0)
+  currentPower = isMaxDifficulty() ? POWER_MAX : 0
+  updatePowerBar(powerBar || document.getElementById("power-bar"), playComboCount, currentPower)
 }
 
 function updateSharedHud() {
@@ -631,7 +698,7 @@ function updateSharedHud() {
 
 function updateLevelDisplay() {
   const dan = playState.multiplier
-  const level = getDifficultyLevel(playState.subLevel)
+  const level = getDifficultyLevel()
   playModeLabel.textContent = `${dan}단.Lv${level}`
 }
 
@@ -643,12 +710,8 @@ function updatePlayView() {
   playHint.textContent = `${playState.currentDan}×${playState.currentTimes} · ${playState.questionsAnswered + 1}/${PROBLEMS_PER_STAGE}번째 · 묶음을 만들어 봐요!`
 }
 
-function getDifficultyLevel(subLevel) {
-  if (subLevel <= 4) return 1
-  if (subLevel <= 8) return 2
-  if (subLevel <= 12) return 3
-  if (subLevel <= 16) return 4
-  return 5
+function getDifficultyLevel() {
+  return playState.difficultyLevel
 }
 
 function getMultiplierByLevel(level) {
@@ -669,7 +732,7 @@ function formatProblemKey(multiplier, multiplicand) {
 
 function generateRandomMultiplicand() {
   const multiplier = playState.multiplier
-  const level = getDifficultyLevel(playState.subLevel)
+  const level = getDifficultyLevel()
 
   let multiplicand = getMultiplierByLevel(level)
 
@@ -702,13 +765,15 @@ function setupPlayGame(dan = 2, subLevel = 1) {
   gameState.foundPairs = new Set()
   loadBolts()
   lastProblem = null
-  currentPower = 0
   playState.questionsAnswered = 0
   playState.stageCombo = 0
   playState.sessionResults = []
   playState.multiplier = dan
   playState.subLevel = subLevel
+  playState.difficultyLevel = loadDifficultyLevel(dan)
+  currentPower = isMaxDifficulty() ? POWER_MAX : 0
   updateSharedHud()
+  updateCurrentLevelDisplay()
   resetPowerGauge()
   nextPlayQuestion()
 }
@@ -758,7 +823,7 @@ function recordPlayAnswer(isCorrect) {
   } else {
     playState.stageCombo = 0
     gameState.combo = 0
-    resetPowerGauge()
+    applyWrongPowerPenalty()
   }
 
   updateSharedHud()
@@ -775,7 +840,6 @@ function handlePlayCorrect() {
   const stageFinished = recordPlayAnswer(true)
   if (stageFinished) return
 
-  showCelebration()
   nextPlayQuestion()
 }
 
@@ -1045,7 +1109,7 @@ function submitPlayAnswer() {
   const expected = playState.multiplier * playState.multiplicand
   const answer = Number(playState.answerInput)
   if (answer === expected) {
-    updatePowerGauge(10)
+    updatePowerGauge(POWER_PER_CORRECT)
     handlePlayCorrect()
     return
   }
